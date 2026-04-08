@@ -258,23 +258,77 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
+/** Cached preferred voice name */
+let preferredVoice = null;
+let voiceSearchDone = false;
+
 /**
- * Speak text using chrome.tts API.
+ * Find the best natural-sounding voice available.
+ * Prefers: Google UK English Female > Samantha > Karen > any English female > default
+ */
+function findBestVoice() {
+  if (voiceSearchDone) return;
+  voiceSearchDone = true;
+
+  chrome.tts.getVoices((voices) => {
+    if (!voices || voices.length === 0) return;
+
+    // Ranked preference — warm, natural, calm voices
+    const preferred = [
+      'Google UK English Female',
+      'Google US English',
+      'Samantha',
+      'Karen',
+      'Moira',
+      'Tessa',
+      'Fiona',
+      'Victoria',
+      'Microsoft Zira',
+    ];
+
+    for (const name of preferred) {
+      const match = voices.find(v => v.voiceName === name);
+      if (match) {
+        preferredVoice = match.voiceName;
+        console.info('[AccessAgent] Selected voice:', preferredVoice);
+        return;
+      }
+    }
+
+    // Fallback: any English voice that isn't "Google Chrome"
+    const english = voices.find(v =>
+      v.lang?.startsWith('en') && !v.voiceName?.includes('Chrome')
+    );
+    if (english) {
+      preferredVoice = english.voiceName;
+      console.info('[AccessAgent] Fallback voice:', preferredVoice);
+    }
+  });
+}
+
+// Find the best voice on startup
+findBestVoice();
+
+/**
+ * Speak text using chrome.tts API with a calm, natural voice.
  * @param {object} payload
  */
 function handleSpeak(payload) {
-  const { text, rate = 1.0, pitch = 1.0, voiceName } = payload;
+  const { text, rate = 0.9, pitch = 0.95, voiceName } = payload;
 
   chrome.tts.stop();
 
   const options = {
-    rate,
+    rate: Math.max(0.5, Math.min(2.0, rate)),
     pitch,
+    volume: 1.0,
     enqueue: false,
   };
 
-  if (voiceName) {
-    options.voiceName = voiceName;
+  // Use user-specified voice, or our preferred natural voice
+  const voice = voiceName || preferredVoice;
+  if (voice) {
+    options.voiceName = voice;
   }
 
   chrome.tts.speak(text, options);
