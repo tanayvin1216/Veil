@@ -107,7 +107,7 @@ async function startCamera() {
 function stopCamera() {
   isRunning = false;
   if (animationId) {
-    cancelAnimationFrame(animationId);
+    clearInterval(animationId);
     animationId = null;
   }
   if (stream) {
@@ -123,20 +123,18 @@ function stopCamera() {
 }
 
 /**
- * Main detection loop — processes video frames at FRAME_INTERVAL.
+ * Main detection loop — uses setInterval because requestAnimationFrame
+ * does NOT fire in offscreen documents (no visible window).
  */
-let lastFrameTime = 0;
-
 function detectLoop() {
-  if (!isRunning || !recognizer || !videoElement) return;
+  if (animationId) clearInterval(animationId);
 
-  const now = performance.now();
-  if (now - lastFrameTime >= FRAME_INTERVAL) {
-    lastFrameTime = now;
-    processFrame(now);
-  }
+  animationId = setInterval(() => {
+    if (!isRunning || !recognizer || !videoElement) return;
+    processFrame(performance.now());
+  }, FRAME_INTERVAL);
 
-  animationId = requestAnimationFrame(detectLoop);
+  console.info('[AccessAgent] Gesture detection loop started');
 }
 
 /**
