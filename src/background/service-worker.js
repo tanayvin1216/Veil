@@ -137,7 +137,7 @@ function handleTier1Complete(tabId, payload) {
     timestamp: payload.timestamp,
   });
 
-  updateBadge(tabId, payload.report.totalRepairs);
+  updateBadge(tabId, payload.report?.totalRepairs ?? 0);
 }
 
 /**

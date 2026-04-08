@@ -10,8 +10,6 @@ import { parseIntent } from './api-client.js';
 /** @type {ConversationEntry[]} */
 let conversationHistory = [];
 
-/** @type {object|null} */
-let lastActionTarget = null;
 
 /**
  * Process a voice command from the user.
@@ -20,6 +18,14 @@ let lastActionTarget = null;
  * @returns {Promise<AgentResponse>}
  */
 export async function processVoiceCommand(transcript, tabId) {
+  if (!transcript?.trim()) {
+    return { confirmation: "I didn't hear anything. Try again.", action: null };
+  }
+
+  if (!tabId) {
+    return { confirmation: 'No active tab found.', action: null };
+  }
+
   const normalized = transcript.toLowerCase().trim();
 
   const ruleBasedResult = classifyIntentRuleBased(normalized);
@@ -201,7 +207,7 @@ async function executeIntent(intent, tabId) {
       }
       if (matches.length === 1 || matches[0].confidence > 0.8) {
         const target = matches[0].element;
-        lastActionTarget = target;
+        // Store for disambiguation follow-up (future feature)
         await executeActionInTab(tabId, { action: 'click', target: target.id });
         return {
           confirmation: `Clicking ${target.ariaLabel || target.visibleText || target.tag}.`,
@@ -255,6 +261,15 @@ async function executeIntent(intent, tabId) {
       let url = intent.target;
       if (!url.startsWith('http')) {
         url = `https://${url}`;
+      }
+      // Validate URL scheme — only allow http/https
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          return { confirmation: `I can only navigate to web URLs, not ${parsed.protocol} addresses.`, action: null };
+        }
+      } catch {
+        return { confirmation: `"${intent.target}" doesn't look like a valid web address.`, action: null };
       }
       await chrome.tabs.update(tabId, { url });
       return { confirmation: `Navigating to ${intent.target}.`, action: { action: 'navigate', url } };

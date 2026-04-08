@@ -99,8 +99,9 @@ async function callOpenAI(apiKey, prompt, imageBase64) {
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+    const errorBody = await response.text();
+    console.error('[AccessAgent] OpenAI API error body:', errorBody);
+    throw new Error(`OpenAI API error: ${response.status}`);
   }
 
   const data = await response.json();
