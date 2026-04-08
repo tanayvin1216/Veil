@@ -30,6 +30,8 @@ function bindElements() {
   elements.apiProvider = document.getElementById('api-provider');
   elements.apiKey = document.getElementById('api-key');
   elements.toggleKeyVisibility = document.getElementById('toggle-key-visibility');
+  elements.elevenlabsKey = document.getElementById('elevenlabs-key');
+  elements.toggleElevenlabsVisibility = document.getElementById('toggle-elevenlabs-visibility');
   elements.tier1 = document.getElementById('tier1-enabled');
   elements.tier2 = document.getElementById('tier2-enabled');
   elements.tier3 = document.getElementById('tier3-enabled');
@@ -58,6 +60,12 @@ function setupListeners() {
     );
   });
 
+  elements.toggleElevenlabsVisibility.addEventListener('click', () => {
+    const isPassword = elements.elevenlabsKey.type === 'password';
+    elements.elevenlabsKey.type = isPassword ? 'text' : 'password';
+    elements.toggleElevenlabsVisibility.textContent = isPassword ? 'Hide' : 'Show';
+  });
+
   elements.voiceRate.addEventListener('input', () => {
     elements.rateValue.textContent = elements.voiceRate.value;
   });
@@ -74,6 +82,7 @@ async function loadSettings() {
 
   elements.apiProvider.value = result[STORAGE_KEYS.API_PROVIDER] || 'openai';
   elements.apiKey.value = result[STORAGE_KEYS.API_KEY] || '';
+  elements.elevenlabsKey.value = result['accessagent_elevenlabs_key'] || '';
 
   elements.tier1.checked = result[STORAGE_KEYS.TIER1_ENABLED] !== false;
   elements.tier2.checked = result[STORAGE_KEYS.TIER2_ENABLED] !== false;
@@ -128,6 +137,7 @@ async function handleSave(event) {
   const settings = {
     [STORAGE_KEYS.API_PROVIDER]: elements.apiProvider.value,
     [STORAGE_KEYS.API_KEY]: elements.apiKey.value,
+    'accessagent_elevenlabs_key': elements.elevenlabsKey.value,
     [STORAGE_KEYS.TIER1_ENABLED]: elements.tier1.checked,
     [STORAGE_KEYS.TIER2_ENABLED]: elements.tier2.checked,
     [STORAGE_KEYS.TIER3_ENABLED]: elements.tier3.checked,

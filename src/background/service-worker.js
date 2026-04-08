@@ -345,29 +345,64 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text. Routes to content script's Web Speech API (has Google UK English
- * Female — the good British voice). Falls back to chrome.tts if content script
- * is not reachable.
+ * Speak text. ElevenLabs (human British voice) → chrome.tts fallback.
  */
 function handleSpeak(payload) {
   const text = typeof payload === 'string' ? payload : payload?.text;
   if (!text) return;
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (chrome.runtime.lastError || !tabs?.[0]?.id) {
-      chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
-      return;
-    }
-    chrome.tabs.sendMessage(tabs[0].id, {
-      type: 'web_speech_speak',
-      payload: { text },
-    }, () => {
-      if (chrome.runtime.lastError) {
-        chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
-      }
-    });
+  // Stop any current speech
+  try { chrome.tts.stop(); } catch (e) { /* ignore */ }
+
+  // Try ElevenLabs, fall back to chrome.tts
+  speakWithElevenLabs(text).catch((err) => {
+    console.warn('[AccessAgent] ElevenLabs failed, using chrome.tts:', err.message);
+    chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
   });
+}
+
+/**
+ * Speak using ElevenLabs TTS API — British Daniel voice.
+ * Audio played via the offscreen document.
+ */
+async function speakWithElevenLabs(text) {
+  const result = await chrome.storage.local.get('accessagent_elevenlabs_key');
+  const apiKey = result['accessagent_elevenlabs_key'];
+
+  if (!apiKey) throw new Error('no_elevenlabs_key');
+
+  // Daniel — British male, natural-sounding
+  const voiceId = 'onwK4e9ZLuTAKqWW03F9';
+
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text,
+      model_id: 'eleven_multilingual_v2',
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+        speed: 1.0,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`ElevenLabs ${response.status}: ${body.substring(0, 100)}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const audioData = Array.from(new Uint8Array(arrayBuffer));
+
+  // Play via offscreen document
+  await ensureOffscreen();
+  await chrome.runtime.sendMessage({ type: 'PLAY_TTS_AUDIO', audioData });
 }
 
 /**
