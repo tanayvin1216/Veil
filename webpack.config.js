@@ -43,6 +43,7 @@ module.exports = {
         { from: 'src/ui/welcome.js', to: 'ui/welcome.js' },
         { from: 'src/content/content.css', to: 'content/content.css' },
         { from: 'src/gesture/offscreen.html', to: 'gesture/offscreen.html' },
+        { from: 'node_modules/@mediapipe/tasks-vision/wasm', to: 'wasm' },
       ],
     }),
   ],

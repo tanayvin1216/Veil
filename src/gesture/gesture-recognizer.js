@@ -49,7 +49,7 @@ async function initRecognizer() {
 
   console.info('[AccessAgent] Loading MediaPipe model...');
   const vision = await FilesetResolver.forVisionTasks(
-    'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+    chrome.runtime.getURL('wasm')
   );
 
   console.info('[AccessAgent] MediaPipe WASM loaded, creating recognizer...');
