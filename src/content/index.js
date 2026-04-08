@@ -52,6 +52,9 @@ async function initialize() {
 
     setupMessageListener();
 
+    // Auto-activate voice mode for fully hands-free experience
+    autoActivateVoice();
+
     info(CONTEXT, 'Initialization complete');
   } catch (err) {
     logError(CONTEXT, 'Initialization failed:', err.message);
@@ -353,10 +356,145 @@ function getPageLandmarks() {
   }));
 }
 
+// ─── Auto Voice Activation ─────────────────────────────────
+
+/**
+ * Auto-activate voice mode on page load.
+ * Tries to start mic directly. If Chrome blocks it (needs user gesture),
+ * injects a screen-reader-announced prompt the user presses Enter on.
+ */
+async function autoActivateVoice() {
+  // Check if user has voice mode enabled in settings
+  try {
+    const result = await chrome.storage.local.get('accessagent_voice_auto');
+    if (result['accessagent_voice_auto'] === false) return;
+  } catch {
+    // Default: auto-activate
+  }
+
+  // Small delay to let the page settle
+  await new Promise(r => setTimeout(r, 500));
+
+  // Initialize voice system
+  if (!voiceInitialized) {
+    initVoiceSystem();
+  }
+
+  // Try to start listening directly
+  try {
+    toggleListening();
+    info(CONTEXT, 'Voice auto-activated');
+
+    // Brief announcement via service worker TTS
+    chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.SPEAK,
+      payload: { text: 'AccessAgent ready.', rate: 0.9 },
+    });
+  } catch {
+    // Chrome blocked auto-start — inject a prompt for the user
+    info(CONTEXT, 'Auto-start blocked, injecting voice prompt');
+    injectVoicePrompt();
+  }
+}
+
+/**
+ * Inject an accessible prompt that a screen reader announces.
+ * User presses Enter = user gesture = mic permission granted.
+ */
+function injectVoicePrompt() {
+  // Don't inject on extension pages
+  if (window.location.protocol === 'chrome-extension:') return;
+
+  const prompt = document.createElement('div');
+  prompt.id = 'accessagent-voice-prompt';
+  prompt.setAttribute('role', 'alert');
+  prompt.setAttribute('aria-live', 'assertive');
+  prompt.setAttribute('tabindex', '0');
+  prompt.style.cssText = [
+    'position: fixed',
+    'top: 0',
+    'left: 0',
+    'right: 0',
+    'z-index: 2147483647',
+    'background: #111111',
+    'color: #FFFFFF',
+    'font-family: system-ui, sans-serif',
+    'font-size: 18px',
+    'font-weight: 600',
+    'padding: 16px 24px',
+    'text-align: center',
+    'cursor: pointer',
+  ].join(';');
+  prompt.textContent = 'Press Enter to activate AccessAgent voice mode';
+
+  const activate = () => {
+    prompt.remove();
+    if (!voiceInitialized) {
+      initVoiceSystem();
+    }
+    toggleListening();
+    chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.SPEAK,
+      payload: { text: 'Voice mode activated. Start speaking.', rate: 0.9 },
+    });
+  };
+
+  prompt.addEventListener('click', activate);
+  prompt.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      activate();
+    }
+  });
+
+  document.body.insertBefore(prompt, document.body.firstChild);
+
+  // Focus it so screen reader announces it
+  setTimeout(() => prompt.focus(), 100);
+}
+
 // ─── Voice & Summary Handlers ──────────────────────────────
 
 /** Whether voice input has been initialized */
 let voiceInitialized = false;
+
+/**
+ * Initialize the voice system (only once).
+ */
+function initVoiceSystem() {
+  if (voiceInitialized) return true;
+
+  const success = initSpeechInput({
+    onTranscript: (transcript) => {
+      if (transcript.startsWith('__error:')) {
+        const errorType = transcript.replace('__error:', '');
+        const messages = {
+          mic_permission_denied: 'Microphone permission was denied. Please allow microphone access in your browser settings.',
+          no_microphone: 'No microphone found. Please connect a microphone.',
+          network_error: 'Speech recognition network error. Check your internet connection.',
+        };
+        chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.SPEAK,
+          payload: { text: messages[errorType] || 'Speech recognition error.', rate: 0.9 },
+        });
+        return;
+      }
+      info(CONTEXT, `Voice command: "${transcript}"`);
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.VOICE_COMMAND,
+        payload: { transcript, tabId: null },
+      });
+    },
+    onStateChange: () => {
+      // Auto-restart handles state — don't announce every pause/restart
+    },
+  });
+
+  if (success) {
+    voiceInitialized = true;
+  }
+  return success;
+}
 
 /**
  * Toggle voice agent listening on/off.
@@ -364,38 +502,9 @@ let voiceInitialized = false;
  */
 function handleToggleVoice() {
   if (!voiceInitialized) {
-    const success = initSpeechInput({
-      onTranscript: (transcript) => {
-        if (transcript.startsWith('__error:')) {
-          const errorType = transcript.replace('__error:', '');
-          const messages = {
-            mic_permission_denied: 'Microphone permission was denied. Please allow microphone access in your browser settings.',
-            no_microphone: 'No microphone found. Please connect a microphone.',
-            network_error: 'Speech recognition network error. Check your internet connection.',
-          };
-          // Speak errors through service worker TTS
-          chrome.runtime.sendMessage({
-            type: MESSAGE_TYPES.SPEAK,
-            payload: { text: messages[errorType] || 'Speech recognition error.', rate: 1.0 },
-          });
-          return;
-        }
-        info(CONTEXT, `Voice command: "${transcript}"`);
-        chrome.runtime.sendMessage({
-          type: MESSAGE_TYPES.VOICE_COMMAND,
-          payload: { transcript, tabId: null },
-        });
-      },
-      onStateChange: (listening) => {
-        // Don't announce every pause/restart — only deliberate toggles
-        // The toggle function handles its own announcement
-      },
-    });
-
-    if (!success) {
+    if (!initVoiceSystem()) {
       return 'Speech recognition is not available in this browser.';
     }
-    voiceInitialized = true;
   }
 
   const nowListening = toggleListening();
