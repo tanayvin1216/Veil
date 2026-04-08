@@ -155,6 +155,8 @@ export function classifyIntentRuleBased(text) {
  * @returns {Promise<AgentResponse>}
  */
 async function handleWithLLM(transcript, tabId) {
+  console.info('[AccessAgent] Handling with LLM/search:', transcript);
+
   // Get the full page structure
   const pageStructure = await sendMessageToTab(tabId, { type: 'get_page_structure' });
   const structure = pageStructure?.data;
@@ -291,26 +293,43 @@ async function parseLLMNavigationResponse(text, tabId) {
  * @param {number} tabId
  * @returns {Promise<AgentResponse>}
  */
-async function simpleTextMatch(query, structure, tabId) {
-  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+/** Common words to ignore when searching */
+const STOP_WORDS = new Set([
+  'tell', 'me', 'about', 'the', 'a', 'an', 'to', 'for', 'of', 'in', 'on',
+  'and', 'or', 'is', 'are', 'was', 'were', 'what', 'where', 'how', 'when',
+  'who', 'which', 'that', 'this', 'with', 'from', 'can', 'do', 'does', 'did',
+  'will', 'would', 'could', 'should', 'have', 'has', 'had', 'be', 'been',
+  'go', 'get', 'find', 'show', 'take', 'give', 'make', 'know', 'think',
+  'want', 'need', 'like', 'see', 'look', 'read', 'open', 'i', 'my', 'it',
+  'some', 'any', 'more', 'there', 'here', 'their', 'please', 'just',
+]);
 
-  // Search links
-  for (const link of structure.links || []) {
-    const linkText = (link.text + ' ' + link.context).toLowerCase();
-    const matches = terms.filter(t => linkText.includes(t));
-    if (matches.length >= Math.max(1, terms.length * 0.5)) {
-      await chrome.tabs.update(tabId, { url: link.href });
-      return {
-        confirmation: `Found a link about that: "${link.text}". Going there now.`,
-        action: { action: 'navigate', url: link.href },
-      };
-    }
+/**
+ * Simple text matching fallback when no API key is available.
+ * Strips stop words, then searches links, nav, and headings.
+ * @param {string} query
+ * @param {object} structure
+ * @param {number} tabId
+ * @returns {Promise<AgentResponse>}
+ */
+async function simpleTextMatch(query, structure, tabId) {
+  // Extract only meaningful keywords
+  const keywords = query.toLowerCase().split(/\s+/)
+    .filter(t => t.length > 2 && !STOP_WORDS.has(t));
+
+  console.info('[AccessAgent] Text match keywords:', keywords);
+
+  if (keywords.length === 0) {
+    return {
+      confirmation: `I'm not sure what to look for. Try being more specific, like "admissions" or "contact".`,
+      action: null,
+    };
   }
 
-  // Search nav items
+  // Search nav items FIRST — most likely what the user wants
   for (const item of structure.navItems || []) {
     const navText = item.text.toLowerCase();
-    if (terms.some(t => navText.includes(t))) {
+    if (keywords.some(k => navText.includes(k))) {
       await chrome.tabs.update(tabId, { url: item.href });
       return {
         confirmation: `Found "${item.text}" in the navigation. Going there now.`,
@@ -319,20 +338,32 @@ async function simpleTextMatch(query, structure, tabId) {
     }
   }
 
-  // Search headings for content
-  for (const heading of structure.headings || []) {
-    const headingText = (heading.text + ' ' + heading.content).toLowerCase();
-    const matches = terms.filter(t => headingText.includes(t));
-    if (matches.length >= Math.max(1, terms.length * 0.5)) {
+  // Search all links
+  for (const link of structure.links || []) {
+    const linkText = (link.text + ' ' + (link.context || '')).toLowerCase();
+    if (keywords.some(k => linkText.includes(k))) {
+      await chrome.tabs.update(tabId, { url: link.href });
       return {
-        confirmation: `I found a section called "${heading.text}". ${heading.content.substring(0, 200)}`,
+        confirmation: `Found a link: "${link.text}". Going there now.`,
+        action: { action: 'navigate', url: link.href },
+      };
+    }
+  }
+
+  // Search headings and their content
+  for (const heading of structure.headings || []) {
+    const text = (heading.text + ' ' + (heading.content || '')).toLowerCase();
+    if (keywords.some(k => text.includes(k))) {
+      const content = heading.content?.substring(0, 200) || '';
+      return {
+        confirmation: `I found a section called "${heading.text}". ${content}`,
         action: null,
       };
     }
   }
 
   return {
-    confirmation: `I couldn't find anything about "${query}" on this page. Try saying it differently.`,
+    confirmation: `I couldn't find anything about "${keywords.join(' ')}" on this page. Try different words.`,
     action: null,
   };
 }
