@@ -1,14 +1,3 @@
-const isMac = navigator.platform.toUpperCase().includes('MAC');
-const modKey = isMac ? 'Control' : 'Alt';
-
-// Update text to show correct modifier key
-if (!isMac) {
-  document.getElementById('shortcut-a').textContent = 'Alt + Shift + A';
-  document.getElementById('shortcut-s').textContent = 'Alt + Shift + P';
-  document.getElementById('shortcut-m').textContent = 'Alt + Shift + M';
-  document.querySelectorAll('.mod-key').forEach(el => { el.textContent = 'Alt'; });
-}
-
 const startBtn = document.getElementById('start-btn');
 const tutorialContent = document.getElementById('tutorial-content');
 const speakingIndicator = document.getElementById('speaking-indicator');
@@ -22,26 +11,24 @@ const tutorialSteps = [
   'repairs heading structure, dismisses cookie popups, and detects CAPTCHAs. ' +
   'You do not need to do anything. It works automatically.',
 
-  'Here are your three keyboard shortcuts. ' +
-  modKey + ' plus Shift plus A. This toggles the voice agent on and off. ' +
-  modKey + ' plus Shift plus P. This reads a summary of the current page. ' +
-  modKey + ' plus Shift plus M. This gives you the What Am I Missing accessibility gap report.',
+  'To activate the voice agent, just click the AccessAgent icon in your browser toolbar. ' +
+  'Your screen reader will announce it. Click it once to start listening, click again to stop. ' +
+  'That is the only thing you need to remember.',
 
-  'To use the voice agent, press ' + modKey + ' plus Shift plus A, then speak naturally. ' +
-  'You can say things like: click followed by a button name. Scroll down. Next heading. ' +
-  'What is on this page. Fill a field with a value. Dismiss this popup. Go back. Or help.',
+  'Once voice mode is on, just talk naturally. ' +
+  'You can say things like: what is on this page. Tell me about admissions. ' +
+  'Take me to the section about financial aid. Click sign in. Scroll down. ' +
+  'Next heading. Go back. Or say help to hear all commands.',
 
-  'AccessAgent has three repair tiers. ' +
-  'Tier 1 runs instantly on every page with no internet needed. ' +
-  'Tier 2 handles cookie banners and CAPTCHAs automatically. ' +
-  'Tier 3 uses AI to describe visual content, but requires an API key you can add in settings.',
+  'You can also right-click the AccessAgent icon for more options: ' +
+  'Read page summary, What am I missing report, and Settings.',
 
   'About privacy. AccessAgent collects zero data. No analytics. No tracking. ' +
-  'Your API key stays on your device and is never shared.',
+  'If you add an API key in settings, it makes the voice agent smarter, ' +
+  'but everything works without one too.',
 
-  'That is everything you need to know. AccessAgent is now active. ' +
-  'Close this tab and browse the web normally. All repairs happen automatically. ' +
-  'Press ' + modKey + ' plus Shift plus A any time to talk to your voice agent. ' +
+  'That is everything. Close this tab and go to any website. ' +
+  'Click the AccessAgent icon in your toolbar to start talking. ' +
   'Say help at any time to hear all available voice commands.',
 ];
 

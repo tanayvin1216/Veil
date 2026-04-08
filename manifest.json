@@ -8,7 +8,8 @@
     "scripting",
     "storage",
     "tabs",
-    "tts"
+    "tts",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -26,14 +27,13 @@
     }
   ],
   "action": {
-    "default_popup": "ui/popup.html",
     "default_icon": {
       "16": "assets/icons/icon-16.png",
       "32": "assets/icons/icon-32.png",
       "48": "assets/icons/icon-48.png",
       "128": "assets/icons/icon-128.png"
     },
-    "default_title": "AccessAgent"
+    "default_title": "Click to activate AccessAgent voice mode"
   },
   "options_page": "ui/settings.html",
   "icons": {

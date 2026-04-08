@@ -19,8 +19,78 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     await initializeDefaults();
     console.info('[AccessAgent] Installed — defaults initialized');
-    // Open welcome/tutorial page on first install
     chrome.tabs.create({ url: chrome.runtime.getURL('ui/welcome.html') });
+  }
+
+  // Create right-click context menu
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'aa-summary',
+      title: 'Read Page Summary',
+      contexts: ['action'],
+    });
+    chrome.contextMenus.create({
+      id: 'aa-missing',
+      title: 'What Am I Missing?',
+      contexts: ['action'],
+    });
+    chrome.contextMenus.create({
+      id: 'aa-settings',
+      title: 'Settings',
+      contexts: ['action'],
+    });
+  });
+});
+
+/**
+ * Extension icon click — toggle voice mode. This is the primary activation.
+ * No keyboard shortcuts needed. Click the icon, start talking.
+ */
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab?.id) return;
+
+  try {
+    const result = await chrome.tabs.sendMessage(tab.id, { type: 'toggle_voice' });
+    if (result?.message) {
+      await handleSpeak({ text: result.message });
+    } else {
+      await handleSpeak({ text: 'Voice mode activated. Start speaking.' });
+    }
+  } catch {
+    await handleSpeak({
+      text: 'AccessAgent cannot run on this page. Go to a regular website first.',
+    });
+  }
+});
+
+/**
+ * Context menu click handler — right-click the extension icon for more options.
+ */
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (!tab?.id) return;
+
+  try {
+    switch (info.menuItemId) {
+      case 'aa-summary': {
+        const result = await chrome.tabs.sendMessage(tab.id, { type: 'get_page_summary' });
+        if (result?.data) {
+          await handleSpeak({ text: result.data });
+        }
+        break;
+      }
+      case 'aa-missing': {
+        const result = await chrome.tabs.sendMessage(tab.id, { type: 'what_am_i_missing' });
+        if (result?.data) {
+          await handleSpeak({ text: result.data });
+        }
+        break;
+      }
+      case 'aa-settings':
+        chrome.runtime.openOptionsPage();
+        break;
+    }
+  } catch {
+    await handleSpeak({ text: 'Not available on this page.' });
   }
 });
 
@@ -87,56 +157,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Keyboard shortcut handler.
+ * Keyboard shortcut handler — kept as backup, but icon click is primary.
  */
 chrome.commands.onCommand.addListener(async (command) => {
-  console.info('[AccessAgent] Command received:', command);
-
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!activeTab?.id) {
-    console.warn('[AccessAgent] No active tab for command:', command);
-    return;
-  }
+  if (!activeTab?.id) return;
 
   try {
-    switch (command) {
-      case 'toggle-voice-agent': {
-        const voiceResult = await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
-        if (voiceResult?.message) {
-          await handleSpeak({ text: voiceResult.message });
-        } else {
-          await handleSpeak({ text: 'Voice agent toggled.' });
-        }
-        break;
-      }
-
-      case 'page-summary': {
-        const summaryResult = await chrome.tabs.sendMessage(activeTab.id, { type: 'get_page_summary' });
-        if (summaryResult?.data) {
-          await handleSpeak({ text: summaryResult.data });
-        } else {
-          await handleSpeak({ text: 'Could not read this page.' });
-        }
-        break;
-      }
-
-      case 'what-am-i-missing': {
-        const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });
-        if (result?.data) {
-          await handleSpeak({ text: result.data });
-        } else {
-          await handleSpeak({ text: 'Could not analyze this page.' });
-        }
-        break;
-      }
+    if (command === 'toggle-voice-agent') {
+      const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
+      await handleSpeak({ text: result?.message || 'Voice toggled.' });
+    } else if (command === 'page-summary') {
+      const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'get_page_summary' });
+      await handleSpeak({ text: result?.data || 'Could not read page.' });
+    } else if (command === 'what-am-i-missing') {
+      const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });
+      await handleSpeak({ text: result?.data || 'Could not analyze page.' });
     }
-  } catch (err) {
-    console.error('[AccessAgent] Command failed:', command, err.message);
-    // Content script not loaded on this page — speak error via TTS
-    await handleSpeak({
-      text: 'AccessAgent is not available on this page. Try a regular website.',
-      rate: 1.0,
-    });
+  } catch {
+    await handleSpeak({ text: 'Not available on this page.' });
   }
 });
 
