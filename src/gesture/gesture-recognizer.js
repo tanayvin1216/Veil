@@ -265,5 +265,13 @@ async function playTTSAudio(audioData) {
 
   const blob = new Blob([new Uint8Array(audioData)], { type: 'audio/mp3' });
   audio.src = URL.createObjectURL(blob);
+
+  // Notify service worker when playback ends so mic can unmute
+  audio.onended = () => {
+    chrome.runtime.sendMessage({ type: 'TTS_AUDIO_ENDED' }, () => {
+      if (chrome.runtime.lastError) { /* ignore */ }
+    });
+  };
+
   await audio.play();
 }

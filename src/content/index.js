@@ -197,6 +197,11 @@ function setupMessageListener() {
         });
         return true;
 
+      case 'mute_mic':
+        isSpeaking = !!message.payload?.muted;
+        sendResponse({ success: true });
+        return false;
+
       case 'web_speech_speak':
         webSpeechSpeak(message.payload?.text);
         sendResponse({ success: true });
@@ -212,6 +217,9 @@ function setupMessageListener() {
     }
   });
 }
+
+/** Whether TTS is currently speaking — used to mute mic during playback */
+let isSpeaking = false;
 
 /** High-quality voice preferences — British and natural-sounding first */
 const VOICE_PREFS = [
@@ -281,6 +289,11 @@ function webSpeechSpeak(text) {
   if (bestVoice) {
     utterance.voice = bestVoice;
   }
+
+  // Mute mic while speaking to prevent feedback loop
+  isSpeaking = true;
+  utterance.onend = () => { isSpeaking = false; };
+  utterance.onerror = () => { isSpeaking = false; };
 
   // Chrome bug: speechSynthesis.speak can silently fail after cancel.
   // Workaround: small delay after cancel.
@@ -624,6 +637,11 @@ function initVoiceSystem() {
           type: MESSAGE_TYPES.SPEAK,
           payload: { text: messages[errorType] || 'Speech recognition error.', rate: 0.9 },
         });
+        return;
+      }
+      // Ignore transcripts while TTS is speaking (prevents feedback loop)
+      if (isSpeaking) {
+        info(CONTEXT, `Ignoring transcript during TTS: "${transcript}"`);
         return;
       }
       info(CONTEXT, `Voice command: "${transcript}"`);

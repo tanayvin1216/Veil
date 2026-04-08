@@ -176,6 +176,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .catch(err => sendResponse({ success: false, error: err.message }));
       return true;
 
+    case 'TTS_AUDIO_ENDED':
+      // Unmute mic after ElevenLabs audio finishes
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs?.[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted: false } }, () => {
+            if (chrome.runtime.lastError) { /* ignore */ }
+          });
+        }
+      });
+      sendResponse({ success: true });
+      return false;
+
     case 'GESTURE_ERROR':
       handleSpeak({ text: message.payload?.error || 'Gesture control error.' });
       sendResponse({ success: true });
@@ -355,10 +367,28 @@ function handleSpeak(payload) {
   // Stop any current speech
   try { chrome.tts.stop(); } catch (e) { /* ignore */ }
 
+  // Tell content script to mute mic while we speak
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs?.[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted: true } }, () => {
+        if (chrome.runtime.lastError) { /* ignore */ }
+      });
+    }
+  });
+
   // Try ElevenLabs, fall back to chrome.tts
   speakWithElevenLabs(text).catch((err) => {
     console.warn('[AccessAgent] ElevenLabs failed, using chrome.tts:', err.message);
-    chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
+    chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 }, () => {
+      // Unmute mic when chrome.tts finishes
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs?.[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted: false } }, () => {
+            if (chrome.runtime.lastError) { /* ignore */ }
+          });
+        }
+      });
+    });
   });
 }
 
