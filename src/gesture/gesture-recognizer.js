@@ -123,6 +123,32 @@ function stopCamera() {
 }
 
 /**
+ * Check if hand is open (all fingers extended) using landmarks.
+ * MediaPipe hand landmarks: 0=wrist, 4=thumb tip, 8=index tip,
+ * 12=middle tip, 16=ring tip, 20=pinky tip.
+ * PIP joints: 6=index, 10=middle, 14=ring, 18=pinky.
+ * Thumb MCP=2, thumb IP=3.
+ * Finger is extended if tip.y < pip.y (above the knuckle in screen coords).
+ * @param {object[]} landmarks - 21 hand landmarks with x, y, z
+ * @returns {boolean}
+ */
+function isHandOpen(landmarks) {
+  if (!landmarks || landmarks.length < 21) return false;
+
+  // Check 4 fingers: tip should be above (lower y) its PIP joint
+  const fingersExtended =
+    landmarks[8].y < landmarks[6].y &&   // index
+    landmarks[12].y < landmarks[10].y &&  // middle
+    landmarks[16].y < landmarks[14].y &&  // ring
+    landmarks[20].y < landmarks[18].y;    // pinky
+
+  // Thumb: tip should be away from palm (x distance from index MCP)
+  const thumbOut = Math.abs(landmarks[4].x - landmarks[5].x) > 0.05;
+
+  return fingersExtended && thumbOut;
+}
+
+/**
  * Main detection loop — uses setInterval because requestAnimationFrame
  * does NOT fire in offscreen documents (no visible window).
  */
@@ -152,8 +178,17 @@ function processFrame(timestamp) {
   }
 
   const topGesture = results.gestures[0][0];
-  const gestureName = topGesture.categoryName;
-  const confidence = topGesture.score;
+  let gestureName = topGesture.categoryName;
+  let confidence = topGesture.score;
+
+  // If MediaPipe isn't sure or says None, check landmarks for open palm manually
+  if ((gestureName === 'None' || gestureName === 'Open_Palm' && confidence < MIN_CONFIDENCE) &&
+      results.landmarks && results.landmarks.length > 0) {
+    if (isHandOpen(results.landmarks[0])) {
+      gestureName = 'Open_Palm';
+      confidence = 0.85;
+    }
+  }
 
   if (confidence < MIN_CONFIDENCE) {
     lastGesture = null;
@@ -178,7 +213,8 @@ function processFrame(timestamp) {
 
   if (gestureCount === GESTURE_HOLD_FRAMES) {
     const now = Date.now();
-    if (now - lastActionTime < GESTURE_COOLDOWN) return;
+    // Open_Palm (stop) skips cooldown — must ALWAYS respond instantly
+    if (gestureName !== 'Open_Palm' && now - lastActionTime < GESTURE_COOLDOWN) return;
 
     lastActionTime = now;
     gestureCount = 0;
