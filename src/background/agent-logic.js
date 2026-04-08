@@ -740,17 +740,41 @@ async function executeIntent(intent, tabId) {
         action: null,
       };
 
-    case 'enable_gestures':
-      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: true } }, () => {
-        if (chrome.runtime.lastError) console.warn('[AccessAgent] Gesture enable msg:', chrome.runtime.lastError.message);
-      });
-      return { confirmation: 'Enabling gesture control. Show your hand to the camera.', action: null };
+    case 'enable_gestures': {
+      // Create offscreen doc and start gesture recognition directly
+      // (can't use sendMessage — service worker can't message itself)
+      try {
+        await chrome.offscreen.createDocument({
+          url: 'gesture/offscreen.html',
+          reasons: ['USER_MEDIA', 'AUDIO_PLAYBACK'],
+          justification: 'Hand gesture recognition and TTS audio playback',
+        });
+      } catch (e) {
+        if (!e.message?.includes('Only a single offscreen')) {
+          return { confirmation: 'Could not start gesture system: ' + e.message, action: null };
+        }
+      }
+      // Wait for offscreen doc to initialize, then start gestures
+      await new Promise(r => setTimeout(r, 1000));
+      try {
+        const res = await chrome.runtime.sendMessage({ type: 'GESTURE_START' });
+        if (res?.success) {
+          await chrome.storage.local.set({ 'accessagent_gestures_enabled': true });
+          return { confirmation: 'Gesture control is on. Show your hand to the camera.', action: null };
+        }
+        return { confirmation: res?.error || 'Could not start gesture control.', action: null };
+      } catch (e) {
+        return { confirmation: 'Gesture start failed: ' + e.message, action: null };
+      }
+    }
 
-    case 'disable_gestures':
-      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: false } }, () => {
-        if (chrome.runtime.lastError) console.warn('[AccessAgent] Gesture disable msg:', chrome.runtime.lastError.message);
-      });
+    case 'disable_gestures': {
+      try {
+        await chrome.runtime.sendMessage({ type: 'GESTURE_STOP' });
+      } catch { /* offscreen might not exist */ }
+      await chrome.storage.local.set({ 'accessagent_gestures_enabled': false });
       return { confirmation: 'Gesture control disabled.', action: null };
+    }
 
     case 'stop_speaking':
       return { confirmation: '', action: { action: 'stop_speaking' }, silent: true };
