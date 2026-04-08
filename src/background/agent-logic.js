@@ -71,7 +71,7 @@ export function classifyIntentRuleBased(text) {
     if (target.includes('.') || target.includes('http')) {
       return { intent: 'navigate_url', target, confidence: 0.95 };
     }
-    return { intent: 'click', target, confidence: 0.85 };
+    return { intent: 'navigate_smart', target, confidence: 0.9 };
   }
 
   if (/^(fill|type|enter|input)\s+(.+?)\s+(with|as|to)\s+(.+)$/i.test(text)) {
