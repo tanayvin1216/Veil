@@ -81,8 +81,8 @@ async function loadSettings() {
 
   elements.speechEngine.value = result[STORAGE_KEYS.SPEECH_ENGINE] || 'web-speech-api';
 
-  const rate = result[STORAGE_KEYS.VOICE_RATE] || 1.0;
-  const pitch = result[STORAGE_KEYS.VOICE_PITCH] || 1.0;
+  const rate = result[STORAGE_KEYS.VOICE_RATE] || 1.05;
+  const pitch = result[STORAGE_KEYS.VOICE_PITCH] || 1.1;
 
   elements.voiceRate.value = rate;
   elements.rateValue.textContent = rate;
