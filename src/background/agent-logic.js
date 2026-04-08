@@ -661,7 +661,28 @@ async function executeIntent(intent, tabId) {
 
     case 'page_summary': {
       const summaryResult = await sendMessageToTab(tabId, { type: 'get_page_summary' });
-      return { confirmation: summaryResult?.data || 'I could not read this page.', action: null };
+      const domSummary = summaryResult?.data || '';
+
+      // Try vision-enhanced summary if API key is available
+      try {
+        const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+        if (screenshot) {
+          const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
+          const pageStructure = await sendMessageToTab(tabId, { type: 'get_page_structure' });
+          const visionResult = await analyzePageForNavigation(
+            base64,
+            pageStructure?.data || {},
+            'describe what is on this page'
+          );
+          if (visionResult.spoken_response) {
+            return { confirmation: visionResult.spoken_response, action: null };
+          }
+        }
+      } catch {
+        // Vision unavailable — use DOM summary
+      }
+
+      return { confirmation: domSummary || 'I could not read this page.', action: null };
     }
 
     case 'what_am_i_missing': {
