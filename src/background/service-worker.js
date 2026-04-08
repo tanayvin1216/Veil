@@ -339,83 +339,9 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text. No async, no voice lookup, no complexity. Just speak.
+ * Speak text using chrome.tts. Dead simple — no async, no promises.
  * @param {object} payload
  */
-/** Preferred voice names — warm, clear, human-sounding voices first */
-const VOICE_PREFERENCES = [
-  'Google UK English Female',
-  'Samantha',
-  'Karen',
-  'Moira',
-  'Google US English',
-  'Tessa',
-  'Fiona',
-  'Victoria',
-  'Microsoft Zira',
-];
-
-/** Cache the selected voice name so we don't search every utterance */
-let cachedVoiceName = null;
-
-function selectVoice() {
-  return new Promise((resolve) => {
-    chrome.tts.getVoices((voices) => {
-      if (!voices || voices.length === 0) {
-        resolve(null);
-        return;
-      }
-      // Check user setting first
-      chrome.storage.local.get(['accessagent_voice_name'], (result) => {
-        const userPref = result['accessagent_voice_name'];
-        if (userPref) {
-          const userVoice = voices.find(v => v.voiceName === userPref);
-          if (userVoice) {
-            resolve(userVoice.voiceName);
-            return;
-          }
-        }
-        // Fall through preference list
-        for (const pref of VOICE_PREFERENCES) {
-          const match = voices.find(v => v.voiceName === pref);
-          if (match) {
-            resolve(match.voiceName);
-            return;
-          }
-        }
-        // Default to first English voice
-        const english = voices.find(v => v.lang?.startsWith('en'));
-        resolve(english?.voiceName || null);
-      });
-    });
-  });
-}
-
-/** Cached user voice settings to avoid reading storage every utterance */
-let cachedVoiceSettings = null;
-
-async function loadVoiceSettings() {
-  const result = await chrome.storage.local.get([
-    'accessagent_voice_rate',
-    'accessagent_voice_pitch',
-    'accessagent_voice_name',
-  ]);
-  cachedVoiceSettings = {
-    rate: parseFloat(result['accessagent_voice_rate']) || 1.05,
-    pitch: parseFloat(result['accessagent_voice_pitch']) || 1.1,
-    voiceName: result['accessagent_voice_name'] || null,
-  };
-  return cachedVoiceSettings;
-}
-
-// Refresh cache when settings change
-chrome.storage.onChanged.addListener((changes) => {
-  if (changes['accessagent_voice_rate'] || changes['accessagent_voice_pitch'] || changes['accessagent_voice_name']) {
-    cachedVoiceSettings = null;
-    cachedVoiceName = null;
-  }
-});
-
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
@@ -428,51 +354,19 @@ function handleSpeak(payload) {
     console.warn('[AccessAgent] tts.stop failed:', e);
   }
 
-  const speakWithVoice = (voiceName, rate, pitch) => {
-    const opts = {
-      rate: Math.min(Math.max(rate, 0.5), 2.0),
-      pitch: Math.min(Math.max(pitch, 0.5), 2.0),
+  try {
+    chrome.tts.speak(text, {
+      rate: 1.05,
+      pitch: 1.1,
       volume: 1.0,
-    };
-    if (voiceName) opts.voiceName = voiceName;
-
-    try {
-      chrome.tts.speak(text, opts, () => {
-        if (chrome.runtime.lastError) {
-          console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
-          if (voiceName) {
-            delete opts.voiceName;
-            chrome.tts.speak(text, opts, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[AccessAgent] TTS retry failed:', chrome.runtime.lastError.message);
-              }
-            });
-          }
-        }
-      });
-    } catch (e) {
-      console.error('[AccessAgent] tts.speak threw:', e);
-    }
-  };
-
-  const go = async () => {
-    const settings = cachedVoiceSettings || await loadVoiceSettings();
-    const rate = payload?.rate || settings.rate;
-    const pitch = payload?.pitch || settings.pitch;
-    const voiceName = settings.voiceName || cachedVoiceName;
-
-    if (voiceName) {
-      speakWithVoice(voiceName, rate, pitch);
-    } else if (cachedVoiceName !== null) {
-      speakWithVoice(cachedVoiceName || undefined, rate, pitch);
-    } else {
-      const name = await selectVoice();
-      cachedVoiceName = name || '';
-      speakWithVoice(name || undefined, rate, pitch);
-    }
-  };
-
-  go();
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
+      }
+    });
+  } catch (e) {
+    console.error('[AccessAgent] tts.speak threw:', e);
+  }
 }
 
 /**
