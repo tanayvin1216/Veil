@@ -813,19 +813,20 @@ function formatActionConfirmation(action) {
  */
 function getHelpText() {
   return [
-    'Here are some things you can say:',
-    'Click [element name] — click a button, link, or control.',
-    'Fill [field name] with [value] — type into a form field.',
-    'Scroll down or scroll up — move through the page.',
-    'Next heading, next button, next link — jump between elements.',
-    'What\'s on this page — hear a page summary.',
+    'Here\'s what I can do.',
+    'Take me to admissions — I\'ll find the link and navigate there.',
+    'Go to google.com — open a website.',
+    'What\'s on this page — I\'ll describe everything I see.',
+    'Describe this image — I\'ll tell you what images show.',
+    'Tell me about financial aid — I\'ll answer from the page.',
+    'Find the contact form — I\'ll search and scroll to it.',
+    'Click apply now — press any button or link.',
+    'Fill email with john at gmail — type in form fields.',
+    'Scroll down, scroll up, next heading, next link — move around.',
     'What am I missing — accessibility gap report.',
-    'Describe this image — get image description.',
-    'Dismiss this popup — close modals and banners.',
-    'Go back or go forward — browser navigation.',
-    'Go to [URL] — navigate to a website.',
+    'Go back, go forward — browser history.',
     'Stop — stop speaking.',
-    'Settings — open extension settings.',
+    'Settings — open my settings.',
   ].join(' ');
 }
 
