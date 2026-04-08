@@ -222,14 +222,18 @@ async function handleVoiceCommand(payload) {
   }
 
   try {
+    console.info('[AccessAgent] Voice command:', transcript, 'tabId:', tabId);
     const response = await processVoiceCommand(transcript, tabId);
+    console.info('[AccessAgent] Voice response:', response?.confirmation?.substring(0, 80));
 
     if (response.confirmation && !response.silent) {
-      handleSpeak({ text: response.confirmation, rate: 1.0 });
+      handleSpeak({ text: response.confirmation, rate: 0.9 });
     }
 
     return { success: true, data: response };
   } catch (err) {
+    console.error('[AccessAgent] Voice command failed:', err);
+    handleSpeak({ text: 'Sorry, something went wrong. Try again.', rate: 0.9 });
     return { success: false, error: err.message };
   }
 }

@@ -196,6 +196,7 @@ ${historyContext || 'None'}`;
  * @returns {Promise<AgentResponse>}
  */
 async function executeIntent(intent, tabId) {
+  try {
   switch (intent.intent) {
     case 'click': {
       const matches = await fuzzyMatchInTab(tabId, intent.target);
@@ -275,8 +276,10 @@ async function executeIntent(intent, tabId) {
       return { confirmation: `Navigating to ${intent.target}.`, action: { action: 'navigate', url } };
     }
 
-    case 'page_summary':
-      return { confirmation: 'Getting page summary...', action: { action: 'page_summary' }, followUp: 'speak_summary' };
+    case 'page_summary': {
+      const summaryResult = await sendMessageToTab(tabId, { type: 'get_page_summary' });
+      return { confirmation: summaryResult?.data || 'I could not read this page.', action: null };
+    }
 
     case 'what_am_i_missing': {
       const result = await sendMessageToTab(tabId, { type: 'what_am_i_missing' });
@@ -284,12 +287,8 @@ async function executeIntent(intent, tabId) {
     }
 
     case 'read_main_content': {
-      const context = await getPageContext(tabId);
-      return {
-        confirmation: `Reading main content of ${context?.title || 'this page'}.`,
-        action: { action: 'read_main_content' },
-        followUp: 'read_content',
-      };
+      const summaryResult = await sendMessageToTab(tabId, { type: 'get_page_summary' });
+      return { confirmation: summaryResult?.data || 'I could not read this page.', action: null };
     }
 
     case 'help':
@@ -315,6 +314,13 @@ async function executeIntent(intent, tabId) {
         confirmation: `I'm not sure what you mean by "${intent.rawText || ''}". Say "help" for available commands.`,
         action: null,
       };
+  }
+  } catch (err) {
+    console.error('[AccessAgent] Action failed:', err.message);
+    return {
+      confirmation: `Sorry, that didn't work. ${err.message || ''}`,
+      action: null,
+    };
   }
 }
 
