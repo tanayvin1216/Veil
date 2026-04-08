@@ -157,6 +157,14 @@ export function classifyIntentRuleBased(text) {
     return { intent: 'read_main_content', confidence: 0.9 };
   }
 
+  if (/^(enable|start|turn on) gesture(s)?$/i.test(text)) {
+    return { intent: 'enable_gestures', confidence: 0.95 };
+  }
+
+  if (/^(disable|stop|turn off) gesture(s)?$/i.test(text)) {
+    return { intent: 'disable_gestures', confidence: 0.95 };
+  }
+
   if (/^(help|what can (i|you) do|commands|options)$/i.test(text)) {
     return { intent: 'help', confidence: 0.95 };
   }
@@ -732,6 +740,14 @@ async function executeIntent(intent, tabId) {
         action: null,
       };
 
+    case 'enable_gestures':
+      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: true } });
+      return { confirmation: 'Enabling gesture control. Show your hand to the camera.', action: null };
+
+    case 'disable_gestures':
+      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: false } });
+      return { confirmation: 'Gesture control disabled.', action: null };
+
     case 'stop_speaking':
       return { confirmation: '', action: { action: 'stop_speaking' }, silent: true };
 
@@ -826,6 +842,8 @@ function getHelpText() {
     'What am I missing — accessibility gap report.',
     'Go back, go forward — browser history.',
     'Stop — stop speaking.',
+    'Enable gestures — turn on hand gesture control via webcam.',
+    'Disable gestures — turn off gesture control.',
     'Settings — open my settings.',
   ].join(' ');
 }

@@ -34,6 +34,7 @@ function bindElements() {
   elements.tier2 = document.getElementById('tier2-enabled');
   elements.tier3 = document.getElementById('tier3-enabled');
   elements.voiceAuto = document.getElementById('voice-auto');
+  elements.gesturesEnabled = document.getElementById('gestures-enabled');
   elements.speechEngine = document.getElementById('speech-engine');
   elements.voiceName = document.getElementById('voice-name');
   elements.voiceRate = document.getElementById('voice-rate');
@@ -78,6 +79,7 @@ async function loadSettings() {
   elements.tier2.checked = result[STORAGE_KEYS.TIER2_ENABLED] !== false;
   elements.tier3.checked = result[STORAGE_KEYS.TIER3_ENABLED] !== false;
   elements.voiceAuto.checked = result[STORAGE_KEYS.VOICE_AUTO] !== false;
+  elements.gesturesEnabled.checked = result['accessagent_gestures_enabled'] === true;
 
   elements.speechEngine.value = result[STORAGE_KEYS.SPEECH_ENGINE] || 'web-speech-api';
 
@@ -130,6 +132,7 @@ async function handleSave(event) {
     [STORAGE_KEYS.TIER2_ENABLED]: elements.tier2.checked,
     [STORAGE_KEYS.TIER3_ENABLED]: elements.tier3.checked,
     [STORAGE_KEYS.VOICE_AUTO]: elements.voiceAuto.checked,
+    'accessagent_gestures_enabled': elements.gesturesEnabled.checked,
     [STORAGE_KEYS.SPEECH_ENGINE]: elements.speechEngine.value,
     [STORAGE_KEYS.VOICE_NAME]: elements.voiceName.value,
     [STORAGE_KEYS.VOICE_RATE]: parseFloat(elements.voiceRate.value),
