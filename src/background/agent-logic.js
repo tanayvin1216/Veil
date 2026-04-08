@@ -5,7 +5,7 @@
  */
 
 import { MESSAGE_TYPES, MAX_CONVERSATION_HISTORY } from '../utils/constants.js';
-import { parseIntent } from './api-client.js';
+import { parseIntent, analyzePageForNavigation } from './api-client.js';
 
 /** @type {ConversationEntry[]} */
 let conversationHistory = [];
@@ -621,7 +621,7 @@ async function executeIntent(intent, tabId) {
         }
       }
 
-      // 6. Nothing found locally — try LLM if API key available
+      // 6. Nothing found locally — try LLM text-only first
       try {
         const response = await handleWithLLM(`take me to ${intent.target}`, tabId);
         if (response.action) return response;
@@ -630,6 +630,27 @@ async function executeIntent(intent, tabId) {
         }
       } catch {
         // No API key or LLM failed — fall through
+      }
+
+      // 7. Vision pipeline — screenshot + page structure for visual grounding
+      try {
+        const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+        if (screenshot) {
+          const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
+          const visionResult = await analyzePageForNavigation(base64, structure, `take me to ${intent.target}`);
+          if (visionResult.found && visionResult.url) {
+            await navigateAndAnnounce(tabId, visionResult.url);
+            return {
+              confirmation: visionResult.spoken_response || `Taking you to ${visionResult.element_description || intent.target}.`,
+              action: { action: 'navigate', url: visionResult.url },
+            };
+          }
+          if (visionResult.spoken_response) {
+            return { confirmation: visionResult.spoken_response, action: null };
+          }
+        }
+      } catch {
+        // Vision failed — give final fallback
       }
 
       return {
