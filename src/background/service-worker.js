@@ -373,9 +373,15 @@ function handleSpeak(payload) {
   // Try ElevenLabs, fall back to chrome.tts
   speakWithElevenLabs(text).catch((err) => {
     console.warn('[AccessAgent] ElevenLabs failed, using chrome.tts:', err.message);
-    chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
-    // Unmute after estimated speech duration (rough: 80ms per char)
-    setTimeout(() => muteMic(false), Math.max(text.length * 80, 2000));
+    chrome.tts.speak(text, {
+      rate: 0.9,
+      pitch: 0.95,
+      onEvent: (event) => {
+        if (event.type === 'end' || event.type === 'error' || event.type === 'cancelled') {
+          muteMic(false);
+        }
+      },
+    });
   });
 }
 
