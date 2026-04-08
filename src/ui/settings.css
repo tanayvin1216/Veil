@@ -1,0 +1,363 @@
+/*
+ * AccessAgent Settings — same design system as popup.
+ * Industrial/utilitarian. Dense but scannable.
+ *
+ * Tokens (shared):
+ *   Ink:     #1A1A1A
+ *   Forest:  #2D5A27
+ *   Surface: #FAFAF8
+ *   Stone:   #D4D4D0
+ *   Ash:     #8A8A85
+ *   Type:    IBM Plex Mono / system monospace
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'IBM Plex Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #1A1A1A;
+  background: #F5F5F2;
+  -webkit-font-smoothing: antialiased;
+}
+
+.settings {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+
+.settings-header {
+  padding-bottom: 24px;
+  border-bottom: 2px solid #1A1A1A;
+  margin-bottom: 32px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: #1A1A1A;
+  color: #FAFAF8;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.brand-name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+/* ─── Fieldsets ──────────────────────────────────────── */
+
+.settings-group {
+  border: 1px solid #D4D4D0;
+  border-radius: 0;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: #FAFAF8;
+}
+
+.group-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8A8A85;
+  padding: 0 4px;
+}
+
+.group-description {
+  font-size: 12px;
+  color: #5A5A55;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+/* ─── Fields ─────────────────────────────────────────── */
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #1A1A1A;
+}
+
+.field-input,
+.field-select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  background: #FAFAF8;
+  border: 1px solid #D4D4D0;
+  color: #1A1A1A;
+  border-radius: 0;
+  appearance: auto;
+}
+
+.field-input:focus,
+.field-select:focus {
+  outline: 2px solid #2D5A27;
+  outline-offset: -1px;
+  border-color: #2D5A27;
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.field-row .field-input {
+  flex: 1;
+}
+
+.field-action {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: #EDEDEA;
+  border: 1px solid #D4D4D0;
+  color: #1A1A1A;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.field-action:hover {
+  background: #E0E0DC;
+}
+
+.field-action:focus-visible {
+  outline: 2px solid #2D5A27;
+  outline-offset: -1px;
+}
+
+.field-hint {
+  font-size: 11px;
+  color: #8A8A85;
+  margin-top: 4px;
+}
+
+.field-output {
+  font-weight: 600;
+  color: #2D5A27;
+  font-variant-numeric: tabular-nums;
+}
+
+.field-range {
+  width: 100%;
+  margin-top: 4px;
+  accent-color: #2D5A27;
+}
+
+/* ─── Checkboxes ─────────────────────────────────────── */
+
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.checkbox-field + .checkbox-field {
+  border-top: 1px solid #F0F0EC;
+}
+
+.checkbox-field input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: #2D5A27;
+  flex-shrink: 0;
+}
+
+.checkbox-label {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.checkbox-label strong {
+  font-weight: 600;
+}
+
+.checkbox-label small {
+  display: block;
+  color: #8A8A85;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* ─── Shortcuts reference ────────────────────────────── */
+
+.shortcut-reference {
+  margin-top: 12px;
+}
+
+.shortcut-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.shortcut-entry + .shortcut-entry {
+  border-top: 1px solid #F0F0EC;
+}
+
+.shortcut-entry dt {
+  font-weight: 400;
+}
+
+.shortcut-entry dd {
+  font-size: 12px;
+  color: #5A5A55;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: #1A1A1A;
+  background: #EDEDEA;
+  padding: 2px 6px;
+  border: 1px solid #D4D4D0;
+  border-radius: 2px;
+}
+
+code {
+  font-family: inherit;
+  font-size: 12px;
+  background: #EDEDEA;
+  padding: 1px 4px;
+  border: 1px solid #E8E8E4;
+}
+
+/* ─── Buttons ────────────────────────────────────────── */
+
+.btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.btn--primary {
+  background: #1A1A1A;
+  color: #FAFAF8;
+}
+
+.btn--primary:hover {
+  background: #333;
+}
+
+.btn--secondary {
+  background: #EDEDEA;
+  color: #1A1A1A;
+  border: 1px solid #D4D4D0;
+}
+
+.btn--secondary:hover {
+  background: #E0E0DC;
+}
+
+.btn:focus-visible {
+  outline: 2px solid #2D5A27;
+  outline-offset: 2px;
+}
+
+/* ─── Save actions ───────────────────────────────────── */
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.save-status {
+  font-size: 12px;
+  color: #2D5A27;
+  font-weight: 500;
+}
+
+/* ─── Footer ─────────────────────────────────────────── */
+
+.settings-footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid #D4D4D0;
+  font-size: 11px;
+  color: #8A8A85;
+}
+
+.footer-note {
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* ─── Focus & Accessibility ──────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid #2D5A27;
+  outline-offset: 2px;
+}
+
+@media (prefers-contrast: high) {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .settings-group {
+    border-color: #000;
+    background: #fff;
+  }
+
+  .field-input,
+  .field-select {
+    border-color: #000;
+  }
+
+  .group-title,
+  .field-hint,
+  .checkbox-label small {
+    color: #000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

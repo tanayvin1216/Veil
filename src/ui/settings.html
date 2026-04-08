@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccessAgent Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="settings" role="main" aria-label="AccessAgent settings">
+
+    <header class="settings-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <div class="brand-text">
+          <h1 class="brand-name">AccessAgent Settings</h1>
+        </div>
+      </div>
+    </header>
+
+    <form id="settings-form" aria-label="Extension settings">
+
+      <fieldset class="settings-group">
+        <legend class="group-title">API Configuration</legend>
+        <p class="group-description">
+          Enter your API key to enable Tier 3 vision analysis and advanced voice agent features.
+          Your key is stored locally and never sent anywhere except the API provider.
+        </p>
+
+        <div class="field">
+          <label for="api-provider" class="field-label">Provider</label>
+          <select id="api-provider" class="field-select">
+            <option value="openai">OpenAI (GPT-4o)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="api-key" class="field-label">API Key</label>
+          <div class="field-row">
+            <input
+              type="password"
+              id="api-key"
+              class="field-input"
+              placeholder="sk-... or sk-ant-..."
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <button type="button" id="toggle-key-visibility" class="field-action" aria-label="Show API key">
+              Show
+            </button>
+          </div>
+          <p class="field-hint">Your key stays on your device. We never see it.</p>
+        </div>
+      </fieldset>
+
+      <fieldset class="settings-group">
+        <legend class="group-title">Repair Tiers</legend>
+
+        <label class="checkbox-field">
+          <input type="checkbox" id="tier1-enabled" checked>
+          <span class="checkbox-label">
+            <strong>Tier 1</strong> — Instant DOM Repair
+            <small>Images, buttons, labels, headings, landmarks, focus traps</small>
+          </span>
+        </label>
+
+        <label class="checkbox-field">
+          <input type="checkbox" id="tier2-enabled" checked>
+          <span class="checkbox-label">
+            <strong>Tier 2</strong> — Smart Contextual Repair
+            <small>Cookie banners, CAPTCHA detection, SPA announcements</small>
+          </span>
+        </label>
+
+        <label class="checkbox-field">
+          <input type="checkbox" id="tier3-enabled" checked>
+          <span class="checkbox-label">
+            <strong>Tier 3</strong> — Vision AI Analysis
+            <small>Screenshot analysis, page summaries, gap reports (requires API key)</small>
+          </span>
+        </label>
+      </fieldset>
+
+      <fieldset class="settings-group">
+        <legend class="group-title">Voice Configuration</legend>
+
+        <div class="field">
+          <label for="speech-engine" class="field-label">Speech recognition engine</label>
+          <select id="speech-engine" class="field-select">
+            <option value="web-speech-api">Web Speech API (cloud, fast)</option>
+            <option value="whisper-local">Whisper (on-device, private)</option>
+          </select>
+          <p class="field-hint">
+            Whisper processes audio entirely on your device — nothing leaves the browser.
+            Requires more CPU.
+          </p>
+        </div>
+
+        <div class="field">
+          <label for="voice-name" class="field-label">Voice</label>
+          <select id="voice-name" class="field-select">
+            <option value="">System default</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="voice-rate" class="field-label">
+            Speech rate:
+            <output id="rate-value" class="field-output">1.0</output>
+          </label>
+          <input
+            type="range"
+            id="voice-rate"
+            min="0.5"
+            max="3.0"
+            step="0.1"
+            value="1.0"
+            class="field-range"
+          >
+        </div>
+
+        <div class="field">
+          <label for="voice-pitch" class="field-label">
+            Pitch:
+            <output id="pitch-value" class="field-output">1.0</output>
+          </label>
+          <input
+            type="range"
+            id="voice-pitch"
+            min="0.5"
+            max="2.0"
+            step="0.1"
+            value="1.0"
+            class="field-range"
+          >
+        </div>
+
+        <button type="button" id="test-voice" class="btn btn--secondary">
+          Test voice
+        </button>
+      </fieldset>
+
+      <fieldset class="settings-group">
+        <legend class="group-title">Keyboard Shortcuts</legend>
+        <p class="group-description">
+          Shortcuts are configured at the browser level.
+          Visit <code>chrome://extensions/shortcuts</code> to customize.
+        </p>
+        <dl class="shortcut-reference">
+          <div class="shortcut-entry">
+            <dt><kbd>Alt+Shift+A</kbd></dt>
+            <dd>Toggle voice agent</dd>
+          </div>
+          <div class="shortcut-entry">
+            <dt><kbd>Alt+Shift+S</kbd></dt>
+            <dd>Page summary</dd>
+          </div>
+          <div class="shortcut-entry">
+            <dt><kbd>Alt+Shift+M</kbd></dt>
+            <dd>What Am I Missing?</dd>
+          </div>
+        </dl>
+      </fieldset>
+
+      <div class="settings-actions">
+        <button type="submit" id="save-btn" class="btn btn--primary">Save settings</button>
+        <span id="save-status" class="save-status" aria-live="polite"></span>
+      </div>
+
+    </form>
+
+    <footer class="settings-footer">
+      <p>AccessAgent v1.0.0 — NCTSA State Conference 2025-2026</p>
+      <p class="footer-note">
+        This is a personal accessibility tool. It makes no compliance claims about any website.
+      </p>
+    </footer>
+
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>
