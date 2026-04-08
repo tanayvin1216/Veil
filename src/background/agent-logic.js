@@ -728,6 +728,37 @@ async function executeIntent(intent, tabId) {
       await chrome.runtime.openOptionsPage();
       return { confirmation: 'Opening settings.', action: null };
 
+    case 'page_question': {
+      // Answer questions about the page using vision + DOM
+      const question = intent.question || intent.rawText || '';
+      try {
+        const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+        const pageStructure = await sendMessageToTab(tabId, { type: 'get_page_structure' });
+        if (screenshot) {
+          const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
+          const visionResult = await analyzePageForNavigation(
+            base64,
+            pageStructure?.data || {},
+            question
+          );
+          if (visionResult.spoken_response) {
+            return { confirmation: visionResult.spoken_response, action: null };
+          }
+        }
+      } catch {
+        // Try text-only LLM fallback
+        try {
+          const response = await handleWithLLM(question, tabId);
+          return response;
+        } catch {
+          // No API key
+        }
+      }
+      // DOM-only fallback
+      const summaryResult = await sendMessageToTab(tabId, { type: 'get_page_summary' });
+      return { confirmation: summaryResult?.data || 'I could not answer that.', action: null };
+    }
+
     case 'dismiss_popup': {
       await executeActionInTab(tabId, { action: 'click', target: 'dismiss-modal' });
       return { confirmation: 'Attempting to dismiss the popup.', action: null };
