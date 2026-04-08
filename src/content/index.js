@@ -199,8 +199,17 @@ function setupMessageListener() {
 
       case 'mute_mic':
         isSpeaking = !!message.payload?.muted;
+        // Safety: auto-unmute after 15s max to prevent stuck state
+        if (isSpeaking) {
+          clearTimeout(muteTimeout);
+          muteTimeout = setTimeout(() => { isSpeaking = false; }, 15000);
+        }
         sendResponse({ success: true });
         return false;
+
+      case 'describe_viewport':
+        sendResponse({ success: true, data: describeViewport() });
+        return true;
 
       case 'web_speech_speak':
         webSpeechSpeak(message.payload?.text);
@@ -220,6 +229,118 @@ function setupMessageListener() {
 
 /** Whether TTS is currently speaking — used to mute mic during playback */
 let isSpeaking = false;
+let muteTimeout = null;
+
+/**
+ * Describe what's visible in the current viewport — reads DOM elements
+ * that are on screen right now, like inspecting the page.
+ * @returns {string}
+ */
+function describeViewport() {
+  const viewportHeight = window.innerHeight;
+  const viewportTop = window.scrollY;
+  const viewportBottom = viewportTop + viewportHeight;
+
+  const parts = [];
+
+  // Find all visible headings
+  const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const visibleHeadings = [];
+  for (const h of headings) {
+    const rect = h.getBoundingClientRect();
+    if (rect.top < viewportHeight && rect.bottom > 0 && h.textContent.trim()) {
+      visibleHeadings.push(h.textContent.trim());
+    }
+  }
+  if (visibleHeadings.length > 0) {
+    parts.push('Headings on screen: ' + visibleHeadings.join(', '));
+  }
+
+  // Find visible links
+  const links = document.querySelectorAll('a[href]');
+  const visibleLinks = [];
+  for (const link of links) {
+    const rect = link.getBoundingClientRect();
+    const text = link.textContent.trim();
+    if (rect.top < viewportHeight && rect.bottom > 0 && text && text.length < 60) {
+      visibleLinks.push(text);
+    }
+    if (visibleLinks.length >= 10) break;
+  }
+  if (visibleLinks.length > 0) {
+    parts.push('Links: ' + visibleLinks.join(', '));
+  }
+
+  // Find visible buttons
+  const buttons = document.querySelectorAll('button, [role="button"], input[type="submit"]');
+  const visibleButtons = [];
+  for (const btn of buttons) {
+    const rect = btn.getBoundingClientRect();
+    const text = (btn.textContent || btn.value || btn.getAttribute('aria-label') || '').trim();
+    if (rect.top < viewportHeight && rect.bottom > 0 && text) {
+      visibleButtons.push(text);
+    }
+  }
+  if (visibleButtons.length > 0) {
+    parts.push('Buttons: ' + visibleButtons.join(', '));
+  }
+
+  // Find visible images
+  const images = document.querySelectorAll('img');
+  const visibleImages = [];
+  for (const img of images) {
+    const rect = img.getBoundingClientRect();
+    if (rect.top < viewportHeight && rect.bottom > 0 && rect.width > 50) {
+      const alt = img.alt || img.getAttribute('aria-label') || 'unlabeled image';
+      visibleImages.push(alt);
+    }
+    if (visibleImages.length >= 5) break;
+  }
+  if (visibleImages.length > 0) {
+    parts.push('Images: ' + visibleImages.join(', '));
+  }
+
+  // Find visible form fields
+  const inputs = document.querySelectorAll('input:not([type="hidden"]), textarea, select');
+  const visibleInputs = [];
+  for (const input of inputs) {
+    const rect = input.getBoundingClientRect();
+    if (rect.top < viewportHeight && rect.bottom > 0) {
+      const label = input.getAttribute('aria-label') || input.placeholder || input.name || input.type;
+      visibleInputs.push(label);
+    }
+  }
+  if (visibleInputs.length > 0) {
+    parts.push('Form fields: ' + visibleInputs.join(', '));
+  }
+
+  // Visible text content summary
+  const mainEl = document.querySelector('main') || document.body;
+  const textNodes = [];
+  const walker = document.createTreeWalker(mainEl, NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = walker.nextNode())) {
+    const parent = node.parentElement;
+    if (!parent) continue;
+    const rect = parent.getBoundingClientRect();
+    if (rect.top < viewportHeight && rect.bottom > 0) {
+      const text = node.textContent.trim();
+      if (text.length > 20 && text.length < 200) {
+        textNodes.push(text);
+      }
+    }
+    if (textNodes.length >= 3) break;
+  }
+  if (textNodes.length > 0) {
+    parts.push('Text on screen: ' + textNodes.join(' '));
+  }
+
+  if (parts.length === 0) {
+    return 'I cannot see any readable content on this part of the page.';
+  }
+
+  return 'On screen right now: ' + parts.join('. ');
+}
 
 /** High-quality voice preferences — British and natural-sounding first */
 const VOICE_PREFS = [

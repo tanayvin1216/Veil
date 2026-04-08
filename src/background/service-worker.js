@@ -571,29 +571,14 @@ async function handleGestureCommand(payload) {
   const tabId = activeTab?.id;
   if (!tabId) return { success: false, error: 'No active tab' };
 
-  // DESCRIBE SCREEN — what's visible in the current viewport
+  // DESCRIBE SCREEN (peace sign) — read DOM elements visible in viewport
   if (intent === 'describe_screen') {
     try {
-      const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
-      if (screenshot) {
-        const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
-        const pageStructure = await chrome.tabs.sendMessage(tabId, { type: 'get_page_structure' });
-        const result = await analyzePageForNavigation(
-          base64,
-          pageStructure?.data || {},
-          'Describe exactly what is visible on screen right now. Be specific and concise.'
-        );
-        if (result.spoken_response) {
-          handleSpeak({ text: result.spoken_response });
-          return { success: true };
-        }
-      }
-    } catch (err) {
-      console.warn('[AccessAgent] Vision describe failed:', err.message);
+      const result = await chrome.tabs.sendMessage(tabId, { type: 'describe_viewport' });
+      handleSpeak({ text: result?.data || 'I cannot see any content on screen.' });
+    } catch {
+      handleSpeak({ text: 'I cannot read this page.' });
     }
-    // Fallback to DOM summary if vision fails
-    const summaryResult = await chrome.tabs.sendMessage(tabId, { type: 'get_page_summary' });
-    handleSpeak({ text: summaryResult?.data || 'I could not read this screen.' });
     return { success: true };
   }
 
