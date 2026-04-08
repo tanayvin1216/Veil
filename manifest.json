@@ -14,8 +14,7 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background/service-worker.js",
-    "type": "module"
+    "service_worker": "background/service-worker.js"
   },
   "content_scripts": [
     {
@@ -47,28 +46,28 @@
     "toggle-voice-agent": {
       "suggested_key": {
         "default": "Alt+Shift+A",
-        "mac": "Alt+Shift+A"
+        "mac": "MacCtrl+Shift+A"
       },
       "description": "Toggle voice agent listening"
     },
     "page-summary": {
       "suggested_key": {
         "default": "Alt+Shift+S",
-        "mac": "Alt+Shift+S"
+        "mac": "MacCtrl+Shift+S"
       },
       "description": "Hear page summary"
     },
     "what-am-i-missing": {
       "suggested_key": {
         "default": "Alt+Shift+M",
-        "mac": "Alt+Shift+M"
+        "mac": "MacCtrl+Shift+M"
       },
       "description": "What Am I Missing report"
     }
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/sounds/*"],
+      "resources": ["assets/sounds/*", "ui/welcome.html"],
       "matches": ["<all_urls>"]
     }
   ]

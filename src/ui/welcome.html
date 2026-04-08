@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccessAgent — Welcome</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'IBM Plex Mono', 'SF Mono', monospace;
+      font-size: 16px;
+      line-height: 1.8;
+      color: #1A1A1A;
+      background: #FAFAF8;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .welcome {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: #1A1A1A;
+      color: #FAFAF8;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .brand-name {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    #waiting-message {
+      font-size: 20px;
+      font-weight: 600;
+      padding: 32px;
+      border: 2px solid #1A1A1A;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    #tutorial-content {
+      display: none;
+    }
+
+    #tutorial-content.visible {
+      display: block;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1A1A1A;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: #333;
+    }
+
+    .shortcut-list {
+      list-style: none;
+      margin: 16px 0;
+    }
+
+    .shortcut-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #E8E8E4;
+      font-size: 15px;
+    }
+
+    kbd {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      background: #EDEDEA;
+      padding: 4px 10px;
+      border: 1px solid #D4D4D0;
+      border-radius: 2px;
+      white-space: nowrap;
+    }
+
+    .step {
+      padding: 16px 0;
+      border-bottom: 1px solid #E8E8E4;
+    }
+
+    .step-number {
+      font-weight: 700;
+      color: #2D5A27;
+      margin-right: 8px;
+    }
+
+    .voice-commands {
+      list-style: none;
+      margin: 12px 0;
+    }
+
+    .voice-commands li {
+      padding: 6px 0;
+      font-size: 15px;
+    }
+
+    .voice-commands li strong {
+      color: #1A1A1A;
+    }
+
+    .done-section {
+      margin-top: 32px;
+      padding: 24px;
+      border: 2px solid #2D5A27;
+      background: #F5F9F4;
+    }
+
+    .done-section p {
+      color: #1A1A1A;
+      font-weight: 500;
+    }
+
+    :focus-visible {
+      outline: 3px solid #2D5A27;
+      outline-offset: 2px;
+    }
+
+    @media (prefers-contrast: high) {
+      body { background: #fff; color: #000; }
+      kbd { background: #eee; border-color: #000; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="welcome" role="main" aria-label="AccessAgent welcome tutorial">
+
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <h1 class="brand-name">AccessAgent</h1>
+    </div>
+
+    <div id="waiting-message" role="alert" aria-live="assertive" tabindex="0">
+      Press any key or click anywhere to start the tutorial.
+    </div>
+
+    <div id="tutorial-content" aria-live="polite">
+
+      <h2>What AccessAgent Does</h2>
+      <p>
+        AccessAgent automatically repairs websites to make them more accessible.
+        It runs on every page you visit. It fixes missing image descriptions,
+        labels unlabeled buttons, repairs heading structure, dismisses cookie
+        popups, detects CAPTCHAs, and more.
+      </p>
+      <p>
+        You don't need to do anything — it works automatically. But you also
+        have keyboard shortcuts and a voice agent for extra control.
+      </p>
+
+      <h2>Keyboard Shortcuts</h2>
+      <ul class="shortcut-list" aria-label="Keyboard shortcuts">
+        <li>
+          <kbd>Control + Shift + A</kbd>
+          <span>Toggle voice agent on and off</span>
+        </li>
+        <li>
+          <kbd>Control + Shift + S</kbd>
+          <span>Hear a summary of the current page</span>
+        </li>
+        <li>
+          <kbd>Control + Shift + M</kbd>
+          <span>What Am I Missing? accessibility gap report</span>
+        </li>
+      </ul>
+      <p>
+        On Windows or Linux, use Alt instead of Control.
+        You can customize these shortcuts at any time by visiting
+        chrome extensions shortcuts in your browser settings.
+      </p>
+
+      <h2>Voice Agent</h2>
+      <p>
+        Press Control + Shift + A to activate the voice agent.
+        Then speak naturally. Here are some things you can say:
+      </p>
+
+      <ul class="voice-commands" aria-label="Voice commands">
+        <li><strong>"Click"</strong> followed by a button or link name</li>
+        <li><strong>"Go to"</strong> followed by a website address</li>
+        <li><strong>"Scroll down"</strong> or <strong>"scroll up"</strong></li>
+        <li><strong>"Next heading"</strong>, <strong>"next button"</strong>, or <strong>"next link"</strong></li>
+        <li><strong>"What's on this page?"</strong> for a page summary</li>
+        <li><strong>"What am I missing?"</strong> for an accessibility gap report</li>
+        <li><strong>"Fill"</strong> a field name <strong>"with"</strong> a value</li>
+        <li><strong>"Dismiss this popup"</strong> to close modals</li>
+        <li><strong>"Go back"</strong> or <strong>"go forward"</strong></li>
+        <li><strong>"Stop"</strong> to stop speaking</li>
+        <li><strong>"Help"</strong> to hear all available commands</li>
+      </ul>
+
+      <h2>How It Works</h2>
+      <div class="step">
+        <span class="step-number">1.</span>
+        <strong>Tier 1 — Instant Repair.</strong>
+        Runs in under 50 milliseconds on every page. Fixes images, buttons,
+        form labels, headings, landmarks, and focus traps. No internet needed.
+      </div>
+      <div class="step">
+        <span class="step-number">2.</span>
+        <strong>Tier 2 — Smart Repair.</strong>
+        Automatically dismisses cookie consent banners. Detects CAPTCHAs and
+        tells you if there's an audio alternative. Announces page changes on
+        single-page apps.
+      </div>
+      <div class="step">
+        <span class="step-number">3.</span>
+        <strong>Tier 3 — Vision AI.</strong>
+        Optional. If you add an API key in settings, AccessAgent can capture
+        a screenshot and describe what's visually on the page. This is the
+        "What Am I Missing?" report.
+      </div>
+
+      <h2>Privacy</h2>
+      <p>
+        AccessAgent collects no data. No analytics. No tracking.
+        If you add an API key for Tier 3, page content is sent to your
+        chosen provider only. Your API key never leaves your device.
+        The voice agent can run fully on-device with the Whisper option
+        in settings.
+      </p>
+
+      <div class="done-section">
+        <p>
+          That's everything. AccessAgent is now running on every website you visit.
+          Close this tab and browse normally — repairs happen automatically.
+          Press Control + Shift + A any time to talk to your voice agent.
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const modKey = isMac ? 'Control' : 'Alt';
+
+    const waitingMessage = document.getElementById('waiting-message');
+    const tutorialContent = document.getElementById('tutorial-content');
+    let tutorialStarted = false;
+
+    // Tutorial steps as spoken text
+    const tutorialSteps = [
+      'Welcome to AccessAgent. Your personal accessibility agent is now installed.',
+
+      'AccessAgent automatically repairs every website you visit. ' +
+      'It fixes missing image descriptions, labels unlabeled buttons, ' +
+      'repairs heading structure, dismisses cookie popups, and detects CAPTCHAs.',
+
+      'Here are your keyboard shortcuts. ' +
+      modKey + ' plus Shift plus A toggles the voice agent on and off. ' +
+      modKey + ' plus Shift plus S reads a summary of the current page. ' +
+      modKey + ' plus Shift plus M gives you the What Am I Missing accessibility gap report.',
+
+      'To use the voice agent, press ' + modKey + ' plus Shift plus A, then speak naturally. ' +
+      'You can say things like: click a button name, scroll down, next heading, ' +
+      'what is on this page, fill a field with a value, dismiss this popup, or help.',
+
+      'AccessAgent has three tiers. ' +
+      'Tier 1 runs instantly on every page with no internet needed. ' +
+      'Tier 2 handles cookie banners and CAPTCHAs. ' +
+      'Tier 3 uses AI to describe visual content, but requires an API key in settings.',
+
+      'Privacy. AccessAgent collects no data. No analytics. No tracking. ' +
+      'Your API key never leaves your device.',
+
+      'That is everything. AccessAgent is now running. ' +
+      'Close this tab and browse normally. Repairs happen automatically. ' +
+      'Press ' + modKey + ' plus Shift plus A any time to talk to your voice agent.',
+    ];
+
+    let currentStep = 0;
+
+    function startTutorial() {
+      if (tutorialStarted) return;
+      tutorialStarted = true;
+
+      waitingMessage.style.display = 'none';
+      tutorialContent.classList.add('visible');
+
+      speakStep(0);
+    }
+
+    function speakStep(index) {
+      if (index >= tutorialSteps.length) return;
+      currentStep = index;
+
+      const utterance = new SpeechSynthesisUtterance(tutorialSteps[index]);
+      utterance.rate = 0.95;
+      utterance.pitch = 1.0;
+
+      utterance.onend = () => {
+        // Small pause between steps
+        setTimeout(() => {
+          speakStep(index + 1);
+        }, 600);
+      };
+
+      utterance.onerror = () => {
+        // Try next step if one fails
+        setTimeout(() => speakStep(index + 1), 300);
+      };
+
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+    }
+
+    // Wait for any keypress or click to start
+    function onActivate() {
+      document.removeEventListener('keydown', onActivate);
+      document.removeEventListener('click', onActivate);
+      startTutorial();
+    }
+
+    document.addEventListener('keydown', onActivate);
+    document.addEventListener('click', onActivate);
+
+    // Also speak the waiting message immediately so screen reader users hear it
+    window.addEventListener('load', () => {
+      waitingMessage.focus();
+      const intro = new SpeechSynthesisUtterance(
+        'AccessAgent installed successfully. Press any key or click anywhere to start the tutorial.'
+      );
+      intro.rate = 0.95;
+      speechSynthesis.speak(intro);
+    });
+  </script>
+</body>
+</html>

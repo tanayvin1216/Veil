@@ -19,6 +19,8 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     await initializeDefaults();
     console.info('[AccessAgent] Installed — defaults initialized');
+    // Open welcome/tutorial page on first install
+    chrome.tabs.create({ url: chrome.runtime.getURL('ui/welcome.html') });
   }
 });
 
@@ -89,25 +91,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  * Keyboard shortcut handler.
  */
 chrome.commands.onCommand.addListener(async (command) => {
+  console.info('[AccessAgent] Command received:', command);
+
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!activeTab?.id) return;
+  if (!activeTab?.id) {
+    console.warn('[AccessAgent] No active tab for command:', command);
+    return;
+  }
 
-  switch (command) {
-    case 'toggle-voice-agent':
-      chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
-      break;
+  try {
+    switch (command) {
+      case 'toggle-voice-agent':
+        await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
+        break;
 
-    case 'page-summary':
-      chrome.tabs.sendMessage(activeTab.id, { type: 'speak_summary' });
-      break;
+      case 'page-summary':
+        await chrome.tabs.sendMessage(activeTab.id, { type: 'speak_summary' });
+        break;
 
-    case 'what-am-i-missing': {
-      const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });
-      if (result?.data) {
-        handleSpeak({ text: result.data, rate: 1.0 });
+      case 'what-am-i-missing': {
+        const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });
+        if (result?.data) {
+          handleSpeak({ text: result.data, rate: 1.0 });
+        }
+        break;
       }
-      break;
     }
+  } catch (err) {
+    console.error('[AccessAgent] Command failed:', command, err.message);
+    // Content script not loaded on this page — speak error via TTS
+    handleSpeak({
+      text: 'AccessAgent is not available on this page. Try a regular website.',
+      rate: 1.0,
+    });
   }
 });
 
