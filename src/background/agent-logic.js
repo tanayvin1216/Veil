@@ -142,6 +142,17 @@ export function classifyIntentRuleBased(text) {
     return { intent: 'page_question', question: text, confidence: 0.85 };
   }
 
+  // Catch-all for questions about the page
+  if (/^(what|where|who|when|how|is there|are there|can i|do they|does this|tell me about)\s+/i.test(text)) {
+    return { intent: 'page_question', question: text, confidence: 0.8 };
+  }
+
+  // Natural "find" phrasing
+  if (/^(find|search|look for|show me|where is|where are)\s+/i.test(text)) {
+    const target = text.replace(/^(find|search|look for|show me|where is|where are)\s+/i, '').trim();
+    return { intent: 'navigate_smart', target, confidence: 0.85 };
+  }
+
   if (/^read (the )?(main content|article|body|text)$/i.test(text)) {
     return { intent: 'read_main_content', confidence: 0.9 };
   }
