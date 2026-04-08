@@ -55,6 +55,9 @@ async function initialize() {
     // Auto-activate voice mode for fully hands-free experience
     autoActivateVoice();
 
+    // Auto-announce what this page is about
+    announcePageOnLoad();
+
     info(CONTEXT, 'Initialization complete');
   } catch (err) {
     logError(CONTEXT, 'Initialization failed:', err.message);
@@ -354,6 +357,28 @@ function getPageLandmarks() {
     role: el.getAttribute('role') || el.tagName.toLowerCase(),
     label: el.getAttribute('aria-label') || '',
   }));
+}
+
+// ─── Auto Page Announcement ────────────────────────────────
+
+/**
+ * Automatically speak what this page is about when it loads.
+ * The agent acts like a companion narrating where you just arrived.
+ */
+function announcePageOnLoad() {
+  // Don't announce on extension pages
+  if (window.location.protocol === 'chrome-extension:') return;
+
+  // Wait a moment for the page to settle, then announce
+  setTimeout(() => {
+    const summary = buildPageSummaryText();
+    if (summary) {
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.SPEAK,
+        payload: { text: summary, rate: 0.9 },
+      });
+    }
+  }, 1500);
 }
 
 // ─── Auto Voice Activation ─────────────────────────────────

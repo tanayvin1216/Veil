@@ -283,7 +283,7 @@ async function parseLLMNavigationResponse(text, tabId) {
       await chrome.tabs.update(tabId, { url: parsed.url });
       const linkDesc = parsed.link_text || 'that page';
       return {
-        confirmation: `Going to ${linkDesc}.`,
+        confirmation: `Navigating to ${linkDesc}. I'll tell you what's on the page when it loads.`,
         action: { action: 'navigate', url: parsed.url },
       };
     }
@@ -352,7 +352,7 @@ async function simpleTextMatch(query, structure, tabId) {
     if (keywords.some(k => navText.includes(k))) {
       await chrome.tabs.update(tabId, { url: item.href });
       return {
-        confirmation: `Found "${item.text}" in the navigation. Going there now.`,
+        confirmation: `Found "${item.text}" in the navigation. Taking you there now. I'll tell you what's on the page when it loads.`,
         action: { action: 'navigate', url: item.href },
       };
     }
@@ -364,7 +364,7 @@ async function simpleTextMatch(query, structure, tabId) {
     if (keywords.some(k => linkText.includes(k))) {
       await chrome.tabs.update(tabId, { url: link.href });
       return {
-        confirmation: `Found a link: "${link.text}". Going there now.`,
+        confirmation: `Found "${link.text}". Taking you there now. I'll tell you what's on the page when it loads.`,
         action: { action: 'navigate', url: link.href },
       };
     }
@@ -461,8 +461,9 @@ async function executeIntent(intent, tabId) {
         const target = matches[0].element;
         // Store for disambiguation follow-up (future feature)
         await executeActionInTab(tabId, { action: 'click', target: target.id });
+        const desc = target.ariaLabel || target.visibleText || target.tag;
         return {
-          confirmation: `Clicking ${target.ariaLabel || target.visibleText || target.tag}.`,
+          confirmation: `Clicking ${desc}. If this opens a new page, I'll tell you what's there.`,
           action: { action: 'click', target: target.id },
         };
       }
@@ -524,7 +525,7 @@ async function executeIntent(intent, tabId) {
         return { confirmation: `"${intent.target}" doesn't look like a valid web address.`, action: null };
       }
       await chrome.tabs.update(tabId, { url });
-      return { confirmation: `Navigating to ${intent.target}.`, action: { action: 'navigate', url } };
+      return { confirmation: `Navigating to ${intent.target}. I'll tell you what's on the page when it loads.`, action: { action: 'navigate', url } };
     }
 
     case 'scroll_to_section': {
