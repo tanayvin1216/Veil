@@ -219,7 +219,7 @@
           <span>Toggle voice agent on and off</span>
         </li>
         <li>
-          <kbd id="shortcut-s">Control + Shift + S</kbd>
+          <kbd id="shortcut-s">Control + Shift + P</kbd>
           <span>Hear a summary of the current page</span>
         </li>
         <li>
@@ -303,7 +303,7 @@
     // Update text to show correct modifier key
     if (!isMac) {
       document.getElementById('shortcut-a').textContent = 'Alt + Shift + A';
-      document.getElementById('shortcut-s').textContent = 'Alt + Shift + S';
+      document.getElementById('shortcut-s').textContent = 'Alt + Shift + P';
       document.getElementById('shortcut-m').textContent = 'Alt + Shift + M';
       document.querySelectorAll('.mod-key').forEach(el => el.textContent = 'Alt');
     }
@@ -323,7 +323,7 @@
 
       'Here are your three keyboard shortcuts. ' +
       modKey + ' plus Shift plus A. This toggles the voice agent on and off. ' +
-      modKey + ' plus Shift plus S. This reads a summary of the current page. ' +
+      modKey + ' plus Shift plus P. This reads a summary of the current page. ' +
       modKey + ' plus Shift plus M. This gives you the What Am I Missing accessibility gap report.',
 
       'To use the voice agent, press ' + modKey + ' plus Shift plus A, then speak naturally. ' +

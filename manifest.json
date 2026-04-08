@@ -52,8 +52,8 @@
     },
     "page-summary": {
       "suggested_key": {
-        "default": "Alt+Shift+S",
-        "mac": "MacCtrl+Shift+S"
+        "default": "Alt+Shift+P",
+        "mac": "MacCtrl+Shift+P"
       },
       "description": "Hear page summary"
     },
