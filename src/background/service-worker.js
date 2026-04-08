@@ -54,7 +54,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     if (result?.message) {
       handleSpeak({ text: result.message });
     } else {
-      handleSpeak({ text: 'Voice mode activated. Start speaking.' });
+      handleSpeak({ text: 'Start talking, I\'m listening.' });
     }
   } catch {
     handleSpeak({

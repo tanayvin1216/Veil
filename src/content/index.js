@@ -55,9 +55,6 @@ async function initialize() {
     // Auto-activate voice mode for fully hands-free experience
     autoActivateVoice();
 
-    // Auto-announce what this page is about
-    announcePageOnLoad();
-
     info(CONTEXT, 'Initialization complete');
   } catch (err) {
     logError(CONTEXT, 'Initialization failed:', err.message);
@@ -483,7 +480,7 @@ function activateVoiceFromBar(bar) {
 
   chrome.runtime.sendMessage({
     type: MESSAGE_TYPES.SPEAK,
-    payload: { text: 'Voice mode on. Start speaking.', rate: 0.9 },
+    payload: { text: 'Start talking, I\'m listening.', rate: 0.9 },
   });
 }
 
