@@ -362,12 +362,34 @@ function selectVoice() {
   });
 }
 
+/** Cached user voice settings to avoid reading storage every utterance */
+let cachedVoiceSettings = null;
+
+async function loadVoiceSettings() {
+  const result = await chrome.storage.local.get([
+    'accessagent_voice_rate',
+    'accessagent_voice_pitch',
+    'accessagent_voice_name',
+  ]);
+  cachedVoiceSettings = {
+    rate: parseFloat(result['accessagent_voice_rate']) || 1.05,
+    pitch: parseFloat(result['accessagent_voice_pitch']) || 1.1,
+    voiceName: result['accessagent_voice_name'] || null,
+  };
+  return cachedVoiceSettings;
+}
+
+// Refresh cache when settings change
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes['accessagent_voice_rate'] || changes['accessagent_voice_pitch'] || changes['accessagent_voice_name']) {
+    cachedVoiceSettings = null;
+    cachedVoiceName = null;
+  }
+});
+
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
-
-  const rate = payload?.rate || 1.05;
-  const pitch = payload?.pitch || 1.1;
 
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
@@ -377,7 +399,7 @@ function handleSpeak(payload) {
     console.warn('[AccessAgent] tts.stop failed:', e);
   }
 
-  const speak = (voiceName) => {
+  const speakWithVoice = (voiceName, rate, pitch) => {
     const opts = {
       rate: Math.min(Math.max(rate, 0.5), 2.0),
       pitch: Math.min(Math.max(pitch, 0.5), 2.0),
@@ -389,7 +411,6 @@ function handleSpeak(payload) {
       chrome.tts.speak(text, opts, () => {
         if (chrome.runtime.lastError) {
           console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
-          // Retry without specific voice
           if (voiceName) {
             delete opts.voiceName;
             chrome.tts.speak(text, opts, () => {
@@ -405,14 +426,24 @@ function handleSpeak(payload) {
     }
   };
 
-  if (cachedVoiceName !== null) {
-    speak(cachedVoiceName || undefined);
-  } else {
-    selectVoice().then((name) => {
+  const go = async () => {
+    const settings = cachedVoiceSettings || await loadVoiceSettings();
+    const rate = payload?.rate || settings.rate;
+    const pitch = payload?.pitch || settings.pitch;
+    const voiceName = settings.voiceName || cachedVoiceName;
+
+    if (voiceName) {
+      speakWithVoice(voiceName, rate, pitch);
+    } else if (cachedVoiceName !== null) {
+      speakWithVoice(cachedVoiceName || undefined, rate, pitch);
+    } else {
+      const name = await selectVoice();
       cachedVoiceName = name || '';
-      speak(name || undefined);
-    });
-  }
+      speakWithVoice(name || undefined, rate, pitch);
+    }
+  };
+
+  go();
 }
 
 /**
