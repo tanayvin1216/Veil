@@ -12,7 +12,9 @@ import { runTier2Repairs } from './tier2-smart.js';
 import { runTier3Analysis, buildMissingSummary } from './tier3-vision.js';
 import { buildElementRegistry, fuzzyMatch, getDOMElement } from './dom-labeler.js';
 import { startObserving } from './mutation-observer.js';
-import { getRepairCounts } from './aria-injector.js';
+import { getRepairCounts, announce } from './aria-injector.js';
+import { initSpeechInput, toggleListening, getIsListening } from '../voice/speech-input.js';
+import { speak, stopSpeaking } from '../voice/speech-output.js';
 
 const CONTEXT = 'ContentScript';
 
@@ -147,11 +149,20 @@ function setupMessageListener() {
           .catch(err => sendResponse({ success: false, error: err.message }));
         return true;
 
-      case 'what_am_i_missing':
-        sendResponse({
-          success: true,
-          data: buildMissingSummary(document, visionResult),
-        });
+      case 'what_am_i_missing': {
+        const summary = buildMissingSummary(document, visionResult);
+        sendResponse({ success: true, data: summary });
+        return true;
+      }
+
+      case 'toggle_voice':
+        handleToggleVoice();
+        sendResponse({ success: true });
+        return true;
+
+      case 'speak_summary':
+        handleSpeakSummary();
+        sendResponse({ success: true });
         return true;
 
       case 'fuzzy_match':
@@ -321,6 +332,92 @@ function getPageLandmarks() {
     role: el.getAttribute('role') || el.tagName.toLowerCase(),
     label: el.getAttribute('aria-label') || '',
   }));
+}
+
+// ─── Voice & Summary Handlers ──────────────────────────────
+
+/** Whether voice input has been initialized */
+let voiceInitialized = false;
+
+/**
+ * Toggle voice agent listening on/off.
+ */
+function handleToggleVoice() {
+  if (!voiceInitialized) {
+    const success = initSpeechInput({
+      onTranscript: (transcript) => {
+        if (transcript.startsWith('__error:')) {
+          const errorType = transcript.replace('__error:', '');
+          const messages = {
+            mic_permission_denied: 'Microphone permission was denied. Please allow microphone access in your browser settings.',
+            no_microphone: 'No microphone found. Please connect a microphone.',
+            network_error: 'Speech recognition network error. Check your internet connection.',
+          };
+          speak(messages[errorType] || 'Speech recognition error.', { interrupt: true });
+          return;
+        }
+        info(CONTEXT, `Voice command: "${transcript}"`);
+        chrome.runtime.sendMessage({
+          type: MESSAGE_TYPES.VOICE_COMMAND,
+          payload: { transcript, tabId: null },
+        }, (response) => {
+          if (response?.data?.confirmation && !response.data.silent) {
+            speak(response.data.confirmation, { interrupt: true });
+          }
+        });
+      },
+      onStateChange: (isListening) => {
+        const status = isListening ? 'Voice agent listening.' : 'Voice agent stopped.';
+        speak(status, { interrupt: true });
+        announce(document, 'accessagent-announcements', status);
+      },
+    });
+
+    if (!success) {
+      speak('Speech recognition is not available in this browser.', { interrupt: true });
+      return;
+    }
+    voiceInitialized = true;
+  }
+
+  const nowListening = toggleListening();
+  info(CONTEXT, `Voice agent: ${nowListening ? 'ON' : 'OFF'}`);
+}
+
+/**
+ * Speak a page summary aloud.
+ */
+function handleSpeakSummary() {
+  const title = document.title || 'this page';
+  const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
+    .slice(0, 5)
+    .map(h => h.textContent?.trim())
+    .filter(Boolean);
+
+  const links = document.querySelectorAll('a[href]').length;
+  const buttons = document.querySelectorAll('button, [role="button"]').length;
+  const images = document.querySelectorAll('img').length;
+  const inputs = document.querySelectorAll('input:not([type="hidden"]), textarea, select').length;
+
+  let summary = `You are on ${title}. `;
+
+  if (headings.length > 0) {
+    summary += `Main sections: ${headings.join(', ')}. `;
+  }
+
+  summary += `This page has ${links} links, ${buttons} buttons, ${images} images, and ${inputs} form fields. `;
+
+  if (currentReport?.tier1) {
+    const repairs = currentReport.tier1.totalRepairs;
+    if (repairs > 0) {
+      summary += `AccessAgent made ${repairs} accessibility repairs.`;
+    } else {
+      summary += 'No accessibility repairs were needed.';
+    }
+  }
+
+  speak(summary, { interrupt: true });
+  announce(document, 'accessagent-announcements', 'Page summary spoken.');
 }
 
 // ─── Bootstrap ─────────────────────────────────────────────
