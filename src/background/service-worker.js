@@ -101,13 +101,21 @@ chrome.commands.onCommand.addListener(async (command) => {
 
   try {
     switch (command) {
-      case 'toggle-voice-agent':
-        await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
+      case 'toggle-voice-agent': {
+        const voiceResult = await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
+        if (voiceResult?.message) {
+          handleSpeak({ text: voiceResult.message, rate: 1.0 });
+        }
         break;
+      }
 
-      case 'page-summary':
-        await chrome.tabs.sendMessage(activeTab.id, { type: 'speak_summary' });
+      case 'page-summary': {
+        const summaryResult = await chrome.tabs.sendMessage(activeTab.id, { type: 'get_page_summary' });
+        if (summaryResult?.data) {
+          handleSpeak({ text: summaryResult.data, rate: 1.0 });
+        }
         break;
+      }
 
       case 'what-am-i-missing': {
         const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });

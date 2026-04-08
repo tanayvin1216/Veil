@@ -14,7 +14,7 @@ import { buildElementRegistry, fuzzyMatch, getDOMElement } from './dom-labeler.j
 import { startObserving } from './mutation-observer.js';
 import { getRepairCounts, announce } from './aria-injector.js';
 import { initSpeechInput, toggleListening, getIsListening } from '../voice/speech-input.js';
-import { speak, stopSpeaking } from '../voice/speech-output.js';
+// Speech output handled by service worker via chrome.tts (no user gesture needed)
 
 const CONTEXT = 'ContentScript';
 
@@ -155,14 +155,14 @@ function setupMessageListener() {
         return true;
       }
 
-      case 'toggle_voice':
-        handleToggleVoice();
-        sendResponse({ success: true });
+      case 'toggle_voice': {
+        const voiceMsg = handleToggleVoice();
+        sendResponse({ success: true, message: voiceMsg });
         return true;
+      }
 
-      case 'speak_summary':
-        handleSpeakSummary();
-        sendResponse({ success: true });
+      case 'get_page_summary':
+        sendResponse({ success: true, data: buildPageSummaryText() });
         return true;
 
       case 'fuzzy_match':
@@ -341,6 +341,7 @@ let voiceInitialized = false;
 
 /**
  * Toggle voice agent listening on/off.
+ * @returns {string} Status message for TTS
  */
 function handleToggleVoice() {
   if (!voiceInitialized) {
@@ -353,41 +354,41 @@ function handleToggleVoice() {
             no_microphone: 'No microphone found. Please connect a microphone.',
             network_error: 'Speech recognition network error. Check your internet connection.',
           };
-          speak(messages[errorType] || 'Speech recognition error.', { interrupt: true });
+          // Speak errors through service worker TTS
+          chrome.runtime.sendMessage({
+            type: MESSAGE_TYPES.SPEAK,
+            payload: { text: messages[errorType] || 'Speech recognition error.', rate: 1.0 },
+          });
           return;
         }
         info(CONTEXT, `Voice command: "${transcript}"`);
         chrome.runtime.sendMessage({
           type: MESSAGE_TYPES.VOICE_COMMAND,
           payload: { transcript, tabId: null },
-        }, (response) => {
-          if (response?.data?.confirmation && !response.data.silent) {
-            speak(response.data.confirmation, { interrupt: true });
-          }
         });
       },
       onStateChange: (isListening) => {
         const status = isListening ? 'Voice agent listening.' : 'Voice agent stopped.';
-        speak(status, { interrupt: true });
         announce(document, 'accessagent-announcements', status);
       },
     });
 
     if (!success) {
-      speak('Speech recognition is not available in this browser.', { interrupt: true });
-      return;
+      return 'Speech recognition is not available in this browser.';
     }
     voiceInitialized = true;
   }
 
   const nowListening = toggleListening();
   info(CONTEXT, `Voice agent: ${nowListening ? 'ON' : 'OFF'}`);
+  return nowListening ? 'Voice agent listening.' : 'Voice agent stopped.';
 }
 
 /**
- * Speak a page summary aloud.
+ * Build page summary text. Returned to service worker which speaks via chrome.tts.
+ * @returns {string}
  */
-function handleSpeakSummary() {
+function buildPageSummaryText() {
   const title = document.title || 'this page';
   const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
     .slice(0, 5)
@@ -416,8 +417,7 @@ function handleSpeakSummary() {
     }
   }
 
-  speak(summary, { interrupt: true });
-  announce(document, 'accessagent-announcements', 'Page summary spoken.');
+  return summary;
 }
 
 // ─── Bootstrap ─────────────────────────────────────────────
