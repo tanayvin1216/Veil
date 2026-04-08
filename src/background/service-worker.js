@@ -313,9 +313,61 @@ async function handleToggle(payload) {
  * Speak text. No async, no voice lookup, no complexity. Just speak.
  * @param {object} payload
  */
+/** Preferred voice names — warm, clear, human-sounding voices first */
+const VOICE_PREFERENCES = [
+  'Google UK English Female',
+  'Samantha',
+  'Karen',
+  'Moira',
+  'Google US English',
+  'Tessa',
+  'Fiona',
+  'Victoria',
+  'Microsoft Zira',
+];
+
+/** Cache the selected voice name so we don't search every utterance */
+let cachedVoiceName = null;
+
+function selectVoice() {
+  return new Promise((resolve) => {
+    chrome.tts.getVoices((voices) => {
+      if (!voices || voices.length === 0) {
+        resolve(null);
+        return;
+      }
+      // Check user setting first
+      chrome.storage.local.get(['accessagent_voice_name'], (result) => {
+        const userPref = result['accessagent_voice_name'];
+        if (userPref) {
+          const userVoice = voices.find(v => v.voiceName === userPref);
+          if (userVoice) {
+            resolve(userVoice.voiceName);
+            return;
+          }
+        }
+        // Fall through preference list
+        for (const pref of VOICE_PREFERENCES) {
+          const match = voices.find(v => v.voiceName === pref);
+          if (match) {
+            resolve(match.voiceName);
+            return;
+          }
+        }
+        // Default to first English voice
+        const english = voices.find(v => v.lang?.startsWith('en'));
+        resolve(english?.voiceName || null);
+      });
+    });
+  });
+}
+
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
+
+  const rate = payload?.rate || 1.05;
+  const pitch = payload?.pitch || 1.1;
 
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
@@ -325,18 +377,41 @@ function handleSpeak(payload) {
     console.warn('[AccessAgent] tts.stop failed:', e);
   }
 
-  try {
-    chrome.tts.speak(text, {
-      rate: 0.9,
-      pitch: 1.0,
+  const speak = (voiceName) => {
+    const opts = {
+      rate: Math.min(Math.max(rate, 0.5), 2.0),
+      pitch: Math.min(Math.max(pitch, 0.5), 2.0),
       volume: 1.0,
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
-      }
+    };
+    if (voiceName) opts.voiceName = voiceName;
+
+    try {
+      chrome.tts.speak(text, opts, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
+          // Retry without specific voice
+          if (voiceName) {
+            delete opts.voiceName;
+            chrome.tts.speak(text, opts, () => {
+              if (chrome.runtime.lastError) {
+                console.error('[AccessAgent] TTS retry failed:', chrome.runtime.lastError.message);
+              }
+            });
+          }
+        }
+      });
+    } catch (e) {
+      console.error('[AccessAgent] tts.speak threw:', e);
+    }
+  };
+
+  if (cachedVoiceName !== null) {
+    speak(cachedVoiceName || undefined);
+  } else {
+    selectVoice().then((name) => {
+      cachedVoiceName = name || '';
+      speak(name || undefined);
     });
-  } catch (e) {
-    console.error('[AccessAgent] tts.speak threw:', e);
   }
 }
 
