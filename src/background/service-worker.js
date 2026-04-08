@@ -344,33 +344,62 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
+/** Cached preferred voice name — survives until service worker restarts */
+let preferredVoice = null;
+
 /**
- * Speak text via the content script's Web Speech API (higher quality voices).
- * Falls back to chrome.tts if no active tab.
+ * Find the best voice. Runs once at startup. Callback-based, cannot crash.
+ */
+function findBestVoice() {
+  chrome.tts.getVoices((voices) => {
+    if (!voices || voices.length === 0) return;
+
+    const preferred = [
+      'Google UK English Female',
+      'Google UK English Male',
+      'Google US English',
+      'Samantha',
+      'Karen',
+      'Moira',
+      'Tessa',
+      'Fiona',
+      'Victoria',
+      'Microsoft Zira',
+    ];
+
+    for (const name of preferred) {
+      const match = voices.find(v => v.voiceName === name);
+      if (match) {
+        preferredVoice = match.voiceName;
+        console.info('[AccessAgent] Selected voice:', preferredVoice);
+        return;
+      }
+    }
+
+    const english = voices.find(v => v.lang?.startsWith('en'));
+    if (english) {
+      preferredVoice = english.voiceName;
+      console.info('[AccessAgent] Fallback voice:', preferredVoice);
+    }
+  });
+}
+
+findBestVoice();
+
+/**
+ * Speak text using chrome.tts with the best available voice.
  */
 function handleSpeak(payload) {
-  const text = payload?.text;
+  const text = typeof payload === 'string' ? payload : payload?.text;
   if (!text) return;
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
-  // Send to the active tab's content script for Web Speech API playback
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tabId = tabs?.[0]?.id;
-    if (tabId) {
-      chrome.tabs.sendMessage(tabId, {
-        type: 'web_speech_speak',
-        payload: { text },
-      }, () => {
-        if (chrome.runtime.lastError) {
-          // Content script not ready — fall back to chrome.tts
-          chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
-        }
-      });
-    } else {
-      // No active tab — use chrome.tts
-      chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
-    }
-  });
+  chrome.tts.stop();
+
+  const opts = { rate: 0.9, pitch: 0.95, volume: 1.0, enqueue: false };
+  if (preferredVoice) opts.voiceName = preferredVoice;
+
+  chrome.tts.speak(text, opts);
 }
 
 /**

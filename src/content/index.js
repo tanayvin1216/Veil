@@ -584,15 +584,20 @@ function activateVoiceFromBar(bar) {
   if (!voiceInitialized) {
     const success = initVoiceSystem();
     if (!success) {
-      webSpeechSpeak('Speech recognition is not available in this browser. Try using Chrome.');
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.SPEAK,
+        payload: { text: 'Speech recognition is not available in this browser. Try using Chrome.' },
+      }, () => { if (chrome.runtime.lastError) { /* ignore */ } });
       return;
     }
   }
 
   toggleListening();
 
-  // Speak directly via Web Speech API (better voice, no round-trip)
-  webSpeechSpeak('Start talking, I\'m listening.');
+  chrome.runtime.sendMessage({
+    type: MESSAGE_TYPES.SPEAK,
+    payload: { text: 'Start talking, I\'m listening.' },
+  }, () => { if (chrome.runtime.lastError) { /* ignore */ } });
 }
 
 // ─── Voice & Summary Handlers ──────────────────────────────
