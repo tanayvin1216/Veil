@@ -11,6 +11,7 @@ import { runTier1Repairs } from './tier1-repair.js';
 import { runTier2Repairs } from './tier2-smart.js';
 import { runTier3Analysis, buildMissingSummary } from './tier3-vision.js';
 import { analyzePage } from './page-analyzer.js';
+import { scrapePageStructure } from './page-scraper.js';
 import { buildElementRegistry, fuzzyMatch, getDOMElement } from './dom-labeler.js';
 import { startObserving } from './mutation-observer.js';
 import { getRepairCounts, announce } from './aria-injector.js';
@@ -165,6 +166,17 @@ function setupMessageListener() {
       case 'get_page_summary':
         sendResponse({ success: true, data: buildPageSummaryText() });
         return true;
+
+      case 'get_page_structure':
+        sendResponse({ success: true, data: scrapePageStructure(document) });
+        return true;
+
+      case 'navigate_to_url': {
+        const url = message.payload?.url;
+        if (url) window.location.href = url;
+        sendResponse({ success: true });
+        return true;
+      }
 
       case 'fuzzy_match':
         sendResponse({

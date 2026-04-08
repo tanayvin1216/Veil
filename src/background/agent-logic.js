@@ -36,12 +36,14 @@ export async function processVoiceCommand(transcript, tabId) {
     return response;
   }
 
+  // For anything the rules can't handle, use the LLM with full page context
   try {
-    const llmResult = await classifyIntentWithLLM(transcript, tabId);
-    const response = await executeIntent(llmResult, tabId);
+    const response = await handleWithLLM(transcript, tabId);
     addToHistory(transcript, response.confirmation);
     return response;
-  } catch {
+  } catch (err) {
+    console.error('[AccessAgent] LLM fallback failed:', err.message);
+    // Last resort — try rule-based even with low confidence
     const response = await executeIntent(ruleBasedResult, tabId);
     addToHistory(transcript, response.confirmation);
     return response;
@@ -142,6 +144,197 @@ export function classifyIntentRuleBased(text) {
   }
 
   return { intent: 'unknown', rawText: text, confidence: 0.3 };
+}
+
+/**
+ * Handle a user query using the LLM with full page structure.
+ * The LLM sees all links, headings, and content on the page
+ * and decides what action to take.
+ * @param {string} transcript
+ * @param {number} tabId
+ * @returns {Promise<AgentResponse>}
+ */
+async function handleWithLLM(transcript, tabId) {
+  // Get the full page structure
+  const pageStructure = await sendMessageToTab(tabId, { type: 'get_page_structure' });
+  const structure = pageStructure?.data;
+
+  if (!structure) {
+    return { confirmation: 'I could not read this page.', action: null };
+  }
+
+  // Build a compact page map for the LLM
+  const pageMap = buildPageMap(structure);
+
+  const systemPrompt = `You are a voice navigation assistant for a blind user browsing the web.
+The user asks you something about the current webpage. You have access to the page's full structure: all links, headings, and content sections.
+
+Your job:
+1. If the user asks about a topic (e.g. "tell me about admissions"), find the most relevant link or section on the page and respond with an action.
+2. If the user asks a question that can be answered from the page content, answer it directly.
+3. If the user wants to go somewhere, find the right link.
+
+Respond with ONLY a JSON object:
+{
+  "action": "navigate" | "answer" | "not_found",
+  "url": "<full URL to navigate to, or null>",
+  "answer": "<direct answer to speak to the user, or null>",
+  "link_text": "<text of the link you're clicking, for confirmation>"
+}
+
+Rules:
+- If navigating, include the full URL from the page structure. Do NOT make up URLs.
+- If answering, keep it under 3 sentences.
+- If you can't find anything relevant, set action to "not_found".
+- Be conversational and warm — you're helping a blind person.`;
+
+  const userMessage = `User said: "${transcript}"
+
+Current page: ${structure.title} (${structure.url})
+
+${pageMap}`;
+
+  try {
+    const llmResponse = await parseIntent(systemPrompt, userMessage);
+    return parseLLMNavigationResponse(llmResponse, tabId);
+  } catch (err) {
+    // No API key or API error — try simple text matching as fallback
+    return simpleTextMatch(transcript, structure, tabId);
+  }
+}
+
+/**
+ * Build a compact text representation of the page for the LLM.
+ * @param {object} structure
+ * @returns {string}
+ */
+function buildPageMap(structure) {
+  const parts = [];
+
+  if (structure.navItems?.length > 0) {
+    parts.push('NAVIGATION MENU:');
+    for (const item of structure.navItems) {
+      parts.push(`- "${item.text}" → ${item.href}`);
+    }
+  }
+
+  if (structure.headings?.length > 0) {
+    parts.push('\nPAGE SECTIONS:');
+    for (const h of structure.headings) {
+      const preview = h.content ? `: ${h.content.substring(0, 100)}` : '';
+      parts.push(`- ${'#'.repeat(h.level)} ${h.text}${preview}`);
+    }
+  }
+
+  if (structure.links?.length > 0) {
+    parts.push('\nLINKS ON PAGE:');
+    for (const link of structure.links.slice(0, 50)) {
+      const ctx = link.context && link.context !== link.text
+        ? ` (near: ${link.context.substring(0, 60)})`
+        : '';
+      parts.push(`- "${link.text}" → ${link.href}${ctx}`);
+    }
+  }
+
+  return parts.join('\n');
+}
+
+/**
+ * Parse the LLM's navigation response.
+ * @param {string} text
+ * @param {number} tabId
+ * @returns {Promise<AgentResponse>}
+ */
+async function parseLLMNavigationResponse(text, tabId) {
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return { confirmation: text.substring(0, 300), action: null };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (parsed.action === 'navigate' && parsed.url) {
+      // Navigate to the URL
+      await chrome.tabs.update(tabId, { url: parsed.url });
+      const linkDesc = parsed.link_text || 'that page';
+      return {
+        confirmation: `Going to ${linkDesc}.`,
+        action: { action: 'navigate', url: parsed.url },
+      };
+    }
+
+    if (parsed.action === 'answer' && parsed.answer) {
+      return {
+        confirmation: parsed.answer,
+        action: null,
+      };
+    }
+
+    return {
+      confirmation: 'I couldn\'t find anything about that on this page. Try asking differently or say "help".',
+      action: null,
+    };
+  } catch {
+    return {
+      confirmation: text.substring(0, 300) || 'I couldn\'t understand the response. Try again.',
+      action: null,
+    };
+  }
+}
+
+/**
+ * Simple text matching fallback when no API key is available.
+ * Searches links and headings for the user's query terms.
+ * @param {string} query
+ * @param {object} structure
+ * @param {number} tabId
+ * @returns {Promise<AgentResponse>}
+ */
+async function simpleTextMatch(query, structure, tabId) {
+  const terms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+
+  // Search links
+  for (const link of structure.links || []) {
+    const linkText = (link.text + ' ' + link.context).toLowerCase();
+    const matches = terms.filter(t => linkText.includes(t));
+    if (matches.length >= Math.max(1, terms.length * 0.5)) {
+      await chrome.tabs.update(tabId, { url: link.href });
+      return {
+        confirmation: `Found a link about that: "${link.text}". Going there now.`,
+        action: { action: 'navigate', url: link.href },
+      };
+    }
+  }
+
+  // Search nav items
+  for (const item of structure.navItems || []) {
+    const navText = item.text.toLowerCase();
+    if (terms.some(t => navText.includes(t))) {
+      await chrome.tabs.update(tabId, { url: item.href });
+      return {
+        confirmation: `Found "${item.text}" in the navigation. Going there now.`,
+        action: { action: 'navigate', url: item.href },
+      };
+    }
+  }
+
+  // Search headings for content
+  for (const heading of structure.headings || []) {
+    const headingText = (heading.text + ' ' + heading.content).toLowerCase();
+    const matches = terms.filter(t => headingText.includes(t));
+    if (matches.length >= Math.max(1, terms.length * 0.5)) {
+      return {
+        confirmation: `I found a section called "${heading.text}". ${heading.content.substring(0, 200)}`,
+        action: null,
+      };
+    }
+  }
+
+  return {
+    confirmation: `I couldn't find anything about "${query}" on this page. Try saying it differently.`,
+    action: null,
+  };
 }
 
 /**
