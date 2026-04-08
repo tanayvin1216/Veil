@@ -236,7 +236,7 @@ function identifyCaptchaType(element) {
   if (src.includes('recaptcha') || className.includes('recaptcha') || id.includes('recaptcha')) {
     return 'reCAPTCHA';
   }
-  if (src.includes('hcaptcha') || className.includes('hcaptcha') || id.includes('hcaptcha')) {
+  if (src.includes('hcaptcha') || className.includes('hcaptcha') || className.includes('h-captcha') || id.includes('hcaptcha') || id.includes('h-captcha')) {
     return 'hCaptcha';
   }
   if (src.includes('cloudflare') || className.includes('turnstile') || id.includes('turnstile')) {

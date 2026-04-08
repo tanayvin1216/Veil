@@ -111,10 +111,11 @@ describe('Tier 1 DOM Repair', () => {
       expect(count).toBe(1);
     });
 
-    test('labels button from title attribute', () => {
+    test('skips button with title attribute (already accessible)', () => {
       document.body.innerHTML = '<button title="Submit form"><span class="icon"></span></button>';
       const count = repairButtons(document);
-      expect(document.querySelector('button').getAttribute('aria-label')).toBe('Submit form');
+      // Button with title already has accessible name — no repair needed
+      expect(count).toBe(0);
     });
 
     test('skips buttons with existing text content', () => {

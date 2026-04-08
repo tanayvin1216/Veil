@@ -305,7 +305,8 @@ function hasInputLabel(input, doc) {
 
   const id = input.id;
   if (id) {
-    const label = doc.querySelector(`label[for="${CSS.escape(id)}"]`);
+    const escapedId = id.replace(/([^\w-])/g, '\\$1');
+    const label = doc.querySelector(`label[for="${escapedId}"]`);
     if (label?.textContent?.trim()) return true;
   }
 

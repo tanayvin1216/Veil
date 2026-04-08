@@ -22,6 +22,18 @@ window.getComputedStyle = jest.fn().mockReturnValue({
   opacity: '1',
 });
 
+// Mock getBoundingClientRect for jsdom (always returns 0x0)
+Element.prototype.getBoundingClientRect = jest.fn().mockReturnValue({
+  width: 100,
+  height: 40,
+  top: 0,
+  left: 0,
+  right: 100,
+  bottom: 40,
+  x: 0,
+  y: 0,
+});
+
 const {
   buildElementRegistry,
   getRegistryArray,

@@ -23,7 +23,7 @@ export function classifyIntent(text) {
     { regex: /^(go back|back)$/i, intent: 'go_back' },
     { regex: /^(go forward|forward)$/i, intent: 'go_forward' },
     { regex: /^next\s+(heading|button|link|input|field)$/i, intent: 'next_element', targetGroup: 1 },
-    { regex: /^(what('?s| is) on this page|describe|summarize|page summary)$/i, intent: 'page_summary' },
+    { regex: /^(what('?s| is) on this page|describe( this page)?|summarize( this page)?|page summary)$/i, intent: 'page_summary' },
     { regex: /^what am i missing$/i, intent: 'what_am_i_missing' },
     { regex: /^(help|what can i do|commands)$/i, intent: 'help' },
     { regex: /^(stop|quiet|cancel|shut up)$/i, intent: 'stop_speaking' },
