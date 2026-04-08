@@ -359,9 +359,9 @@ function getPageLandmarks() {
 // ─── Auto Voice Activation ─────────────────────────────────
 
 /**
- * Auto-activate voice mode on page load.
- * Tries to start mic directly. If Chrome blocks it (needs user gesture),
- * injects a screen-reader-announced prompt the user presses Enter on.
+ * Inject the voice activation bar on every page.
+ * Chrome requires a user gesture to start the mic — no way around it.
+ * This bar is announced by screen readers. User presses Enter = voice on.
  */
 async function autoActivateVoice() {
   // Check if user has voice mode enabled in settings
@@ -369,48 +369,27 @@ async function autoActivateVoice() {
     const result = await chrome.storage.local.get('accessagent_voice_auto');
     if (result['accessagent_voice_auto'] === false) return;
   } catch {
-    // Default: auto-activate
+    // Default: on
   }
 
-  // Small delay to let the page settle
-  await new Promise(r => setTimeout(r, 500));
-
-  // Initialize voice system
-  if (!voiceInitialized) {
-    initVoiceSystem();
-  }
-
-  // Try to start listening directly
-  try {
-    toggleListening();
-    info(CONTEXT, 'Voice auto-activated');
-
-    // Brief announcement via service worker TTS
-    chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.SPEAK,
-      payload: { text: 'AccessAgent ready.', rate: 0.9 },
-    });
-  } catch {
-    // Chrome blocked auto-start — inject a prompt for the user
-    info(CONTEXT, 'Auto-start blocked, injecting voice prompt');
-    injectVoicePrompt();
-  }
-}
-
-/**
- * Inject an accessible prompt that a screen reader announces.
- * User presses Enter = user gesture = mic permission granted.
- */
-function injectVoicePrompt() {
   // Don't inject on extension pages
   if (window.location.protocol === 'chrome-extension:') return;
 
-  const prompt = document.createElement('div');
-  prompt.id = 'accessagent-voice-prompt';
-  prompt.setAttribute('role', 'alert');
-  prompt.setAttribute('aria-live', 'assertive');
-  prompt.setAttribute('tabindex', '0');
-  prompt.style.cssText = [
+  // Wait for body to be ready
+  await new Promise(r => setTimeout(r, 300));
+
+  if (!document.body) return;
+
+  // Remove any existing prompt
+  const existing = document.getElementById('accessagent-voice-prompt');
+  if (existing) existing.remove();
+
+  // Create the bar
+  const bar = document.createElement('div');
+  bar.id = 'accessagent-voice-prompt';
+  bar.setAttribute('role', 'banner');
+  bar.setAttribute('aria-label', 'AccessAgent voice activation');
+  bar.style.cssText = [
     'position: fixed',
     'top: 0',
     'left: 0',
@@ -418,39 +397,67 @@ function injectVoicePrompt() {
     'z-index: 2147483647',
     'background: #111111',
     'color: #FFFFFF',
-    'font-family: system-ui, sans-serif',
-    'font-size: 18px',
-    'font-weight: 600',
-    'padding: 16px 24px',
+    'font-family: system-ui, -apple-system, sans-serif',
+    'font-size: 0',
+    'padding: 0',
     'text-align: center',
-    'cursor: pointer',
+    'border-bottom: 2px solid #2D5A27',
   ].join(';');
-  prompt.textContent = 'Press Enter to activate AccessAgent voice mode';
 
-  const activate = () => {
-    prompt.remove();
-    if (!voiceInitialized) {
-      initVoiceSystem();
-    }
-    toggleListening();
-    chrome.runtime.sendMessage({
-      type: MESSAGE_TYPES.SPEAK,
-      payload: { text: 'Voice mode activated. Start speaking.', rate: 0.9 },
-    });
-  };
+  const btn = document.createElement('button');
+  btn.setAttribute('aria-label', 'Activate AccessAgent voice mode. Press Enter to start talking.');
+  btn.style.cssText = [
+    'display: block',
+    'width: 100%',
+    'background: #111111',
+    'color: #FFFFFF',
+    'font-family: system-ui, -apple-system, sans-serif',
+    'font-size: 16px',
+    'font-weight: 600',
+    'padding: 14px 24px',
+    'border: none',
+    'cursor: pointer',
+    'text-align: center',
+  ].join(';');
+  btn.textContent = 'AccessAgent — Press Enter to start voice mode';
 
-  prompt.addEventListener('click', activate);
-  prompt.addEventListener('keydown', (e) => {
+  btn.addEventListener('click', () => activateVoiceFromBar(bar));
+  btn.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      activate();
+      activateVoiceFromBar(bar);
     }
   });
 
-  document.body.insertBefore(prompt, document.body.firstChild);
+  bar.appendChild(btn);
+  document.body.insertBefore(bar, document.body.firstChild);
 
-  // Focus it so screen reader announces it
-  setTimeout(() => prompt.focus(), 100);
+  // Focus the button so screen reader announces it immediately
+  setTimeout(() => btn.focus(), 200);
+}
+
+/**
+ * Called when user presses Enter on the voice bar.
+ * @param {HTMLElement} bar - The prompt bar to remove
+ */
+function activateVoiceFromBar(bar) {
+  bar.remove();
+
+  if (!voiceInitialized) {
+    initVoiceSystem();
+  }
+
+  const nowListening = toggleListening();
+
+  chrome.runtime.sendMessage({
+    type: MESSAGE_TYPES.SPEAK,
+    payload: {
+      text: nowListening
+        ? 'Voice mode on. Start speaking.'
+        : 'Voice mode activated.',
+      rate: 0.9,
+    },
+  });
 }
 
 // ─── Voice & Summary Handlers ──────────────────────────────
