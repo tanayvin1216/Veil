@@ -52,14 +52,6 @@ async function initialize() {
 
     setupMessageListener();
 
-    // Preload Web Speech API voices (Chrome loads them async)
-    if (window.speechSynthesis) {
-      window.speechSynthesis.getVoices();
-      window.speechSynthesis.onvoiceschanged = () => {
-        cachedVoice = null; // Reset cache so next speak picks best voice
-      };
-    }
-
     // Auto-activate voice mode for fully hands-free experience
     autoActivateVoice();
 
@@ -237,7 +229,37 @@ const VOICE_PREFS = [
 ];
 
 /** Cached voice object */
-let cachedVoice = null;
+let bestVoice = null;
+let voiceSearchDone = false;
+
+/**
+ * Find and cache the best available voice.
+ */
+function findBestVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return;
+
+  for (const pref of VOICE_PREFS) {
+    const match = voices.find(v => v.name === pref);
+    if (match) {
+      bestVoice = match;
+      voiceSearchDone = true;
+      info(CONTEXT, `Selected voice: ${match.name} (${match.lang})`);
+      return;
+    }
+  }
+
+  // Fallback: any English voice
+  bestVoice = voices.find(v => v.lang?.startsWith('en')) || null;
+  voiceSearchDone = true;
+  if (bestVoice) info(CONTEXT, `Fallback voice: ${bestVoice.name}`);
+}
+
+// Chrome loads voices async — listen for when they're ready
+if (window.speechSynthesis) {
+  findBestVoice();
+  window.speechSynthesis.onvoiceschanged = findBestVoice;
+}
 
 /**
  * Speak text using Web Speech API with the best available voice.
@@ -248,30 +270,23 @@ function webSpeechSpeak(text) {
 
   window.speechSynthesis.cancel();
 
+  // Try to find voice if not done yet
+  if (!voiceSearchDone) findBestVoice();
+
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.0;
+  utterance.rate = 0.95;
   utterance.pitch = 1.0;
   utterance.volume = 1.0;
 
-  // Find best voice
-  if (!cachedVoice) {
-    const voices = window.speechSynthesis.getVoices();
-    for (const pref of VOICE_PREFS) {
-      const match = voices.find(v => v.name === pref);
-      if (match) {
-        cachedVoice = match;
-        break;
-      }
-    }
-    // Fallback: any English voice
-    if (!cachedVoice) {
-      cachedVoice = voices.find(v => v.lang?.startsWith('en')) || null;
-    }
+  if (bestVoice) {
+    utterance.voice = bestVoice;
   }
 
-  if (cachedVoice) utterance.voice = cachedVoice;
-
-  window.speechSynthesis.speak(utterance);
+  // Chrome bug: speechSynthesis.speak can silently fail after cancel.
+  // Workaround: small delay after cancel.
+  setTimeout(() => {
+    window.speechSynthesis.speak(utterance);
+  }, 50);
 }
 
 /**
@@ -569,28 +584,15 @@ function activateVoiceFromBar(bar) {
   if (!voiceInitialized) {
     const success = initVoiceSystem();
     if (!success) {
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.SPEAK,
-        payload: { text: 'Speech recognition is not available in this browser. Try using Chrome.', rate: 0.9 },
-      }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('[AccessAgent] SPEAK failed:', chrome.runtime.lastError.message);
-        }
-      });
+      webSpeechSpeak('Speech recognition is not available in this browser. Try using Chrome.');
       return;
     }
   }
 
   toggleListening();
 
-  chrome.runtime.sendMessage({
-    type: MESSAGE_TYPES.SPEAK,
-    payload: { text: 'Start talking, I\'m listening.' },
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error('[AccessAgent] SPEAK failed:', chrome.runtime.lastError.message);
-    }
-  });
+  // Speak directly via Web Speech API (better voice, no round-trip)
+  webSpeechSpeak('Start talking, I\'m listening.');
 }
 
 // ─── Voice & Summary Handlers ──────────────────────────────
