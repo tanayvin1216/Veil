@@ -385,39 +385,70 @@ function handleToggleVoice() {
 }
 
 /**
- * Build page summary text. Returned to service worker which speaks via chrome.tts.
+ * Build page summary text that actually describes WHAT THE PAGE IS ABOUT.
+ * A blind user needs to understand the content, not count DOM elements.
  * @returns {string}
  */
 function buildPageSummaryText() {
-  const title = document.title || 'this page';
-  const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
-    .slice(0, 5)
-    .map(h => h.textContent?.trim())
-    .filter(Boolean);
+  const title = document.title || 'Unknown page';
+  const parts = [];
 
-  const links = document.querySelectorAll('a[href]').length;
-  const buttons = document.querySelectorAll('button, [role="button"]').length;
-  const images = document.querySelectorAll('img').length;
-  const inputs = document.querySelectorAll('input:not([type="hidden"]), textarea, select').length;
+  // What page is this
+  parts.push(`You are on: ${title}.`);
 
-  let summary = `You are on ${title}. `;
-
-  if (headings.length > 0) {
-    summary += `Main sections: ${headings.join(', ')}. `;
+  // Meta description — often the best one-line summary
+  const metaDesc = document.querySelector('meta[name="description"]')?.content?.trim();
+  if (metaDesc) {
+    parts.push(metaDesc);
   }
 
-  summary += `This page has ${links} links, ${buttons} buttons, ${images} images, and ${inputs} form fields. `;
-
-  if (currentReport?.tier1) {
-    const repairs = currentReport.tier1.totalRepairs;
-    if (repairs > 0) {
-      summary += `AccessAgent made ${repairs} accessibility repairs.`;
-    } else {
-      summary += 'No accessibility repairs were needed.';
+  // Main heading — what the page is actually about
+  const h1 = document.querySelector('h1');
+  if (h1?.textContent?.trim()) {
+    const h1Text = h1.textContent.trim();
+    if (h1Text !== title) {
+      parts.push(`Main heading: ${h1Text}.`);
     }
   }
 
-  return summary;
+  // Page structure via subheadings — gives the user a table of contents
+  const subheadings = Array.from(document.querySelectorAll('h2'))
+    .slice(0, 8)
+    .map(h => h.textContent?.trim())
+    .filter(t => t && t.length < 100);
+  if (subheadings.length > 0) {
+    parts.push(`This page covers: ${subheadings.join('. ')}.`);
+  }
+
+  // Actual page content — read the first meaningful paragraphs
+  const mainContent = document.querySelector('main, [role="main"], article, #content, #main-content, .content');
+  const contentRoot = mainContent || document.body;
+  const paragraphs = Array.from(contentRoot.querySelectorAll('p'))
+    .map(p => p.textContent?.trim())
+    .filter(t => t && t.length > 40 && t.length < 500)
+    .slice(0, 3);
+
+  if (paragraphs.length > 0) {
+    parts.push(paragraphs.join(' '));
+  }
+
+  // Images without descriptions — tell the user what they're missing
+  const imagesNoAlt = document.querySelectorAll('img:not([alt]), img[alt=""], img[alt="Image (no description available)"]');
+  if (imagesNoAlt.length > 0) {
+    parts.push(`There are ${imagesNoAlt.length} images on this page without descriptions. Say "what am I missing" for details.`);
+  }
+
+  // If there's a form, mention it
+  const forms = document.querySelectorAll('form');
+  if (forms.length > 0) {
+    const formInputs = document.querySelectorAll('input:not([type="hidden"]), textarea, select');
+    parts.push(`This page has a form with ${formInputs.length} fields.`);
+  }
+
+  // Navigation hint
+  parts.push('Say "next heading" to navigate by section, or "help" for all voice commands.');
+
+  return parts.join(' ');
 }
 
 // ─── Bootstrap ─────────────────────────────────────────────
