@@ -345,42 +345,15 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text using chrome.tts.
- * RULE: speech must ALWAYS happen. No async, no voice lookup that can block.
- * @param {object} payload
+ * Speak text using chrome.tts. Absolute minimum — no voice selection,
+ * no retries, no nesting. Just speak.
  */
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
-
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
-
   try { chrome.tts.stop(); } catch (e) { /* ignore */ }
-
-  try {
-    chrome.tts.speak(text, {
-      rate: 1.05,
-      pitch: 1.1,
-      volume: 1.0,
-      voiceName: 'Samantha',
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.warn('[AccessAgent] TTS voice failed, retrying default:', chrome.runtime.lastError.message);
-        // Samantha not available — retry with no voice name (system default)
-        try {
-          chrome.tts.speak(text, { rate: 1.05, pitch: 1.1, volume: 1.0 }, () => {
-            if (chrome.runtime.lastError) {
-              console.error('[AccessAgent] TTS default also failed:', chrome.runtime.lastError.message);
-            }
-          });
-        } catch (e2) {
-          console.error('[AccessAgent] TTS retry threw:', e2);
-        }
-      }
-    });
-  } catch (e) {
-    console.error('[AccessAgent] tts.speak threw:', e);
-  }
+  chrome.tts.speak(text, { rate: 1.0, pitch: 1.0, volume: 1.0 });
 }
 
 /**

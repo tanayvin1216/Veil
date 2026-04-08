@@ -66,6 +66,9 @@
       "description": "What Am I Missing report"
     }
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://api.openai.com https://api.anthropic.com;"
+  },
   "web_accessible_resources": [
     {
       "resources": ["assets/sounds/*", "ui/welcome.html", "gesture/*"],
