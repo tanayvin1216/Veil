@@ -49,7 +49,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 chrome.storage.local.get('accessagent_gestures_enabled', (result) => {
   if (result['accessagent_gestures_enabled']) {
     ensureGestureOffscreen()
-      .then(() => chrome.runtime.sendMessage({ type: 'GESTURE_START' }))
+      .then(() => {
+        chrome.runtime.sendMessage({ type: 'GESTURE_START' }, () => {
+          if (chrome.runtime.lastError) {
+            console.warn('[AccessAgent] Gesture start msg failed:', chrome.runtime.lastError.message);
+          }
+        });
+      })
       .catch(err => console.warn('[AccessAgent] Gesture auto-start failed:', err.message));
   }
 });
@@ -338,22 +344,9 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
-/** Warm, human-sounding voice preferences (tried in order) */
-const VOICE_PREFS = [
-  'Google UK English Female',
-  'Samantha',
-  'Karen',
-  'Moira',
-  'Google US English',
-  'Tessa',
-  'Fiona',
-  'Victoria',
-  'Microsoft Zira',
-];
-
 /**
- * Speak text using chrome.tts with voice selection.
- * Voice lookup is callback-based (not async) so it can't silently fail.
+ * Speak text using chrome.tts.
+ * RULE: speech must ALWAYS happen. No async, no voice lookup that can block.
  * @param {object} payload
  */
 function handleSpeak(payload) {
@@ -362,60 +355,31 @@ function handleSpeak(payload) {
 
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
+  try { chrome.tts.stop(); } catch (e) { /* ignore */ }
+
   try {
-    chrome.tts.stop();
-  } catch (e) {
-    console.warn('[AccessAgent] tts.stop failed:', e);
-  }
-
-  const doSpeak = (voiceName) => {
-    const opts = { rate: 1.05, pitch: 1.1, volume: 1.0 };
-    if (voiceName) opts.voiceName = voiceName;
-
-    try {
-      chrome.tts.speak(text, opts, () => {
-        if (chrome.runtime.lastError) {
-          console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
-          // If the named voice failed, retry without it
-          if (voiceName) {
-            chrome.tts.speak(text, { rate: 1.05, pitch: 1.1, volume: 1.0 }, () => {
-              if (chrome.runtime.lastError) {
-                console.error('[AccessAgent] TTS retry failed:', chrome.runtime.lastError.message);
-              }
-            });
-          }
-        }
-      });
-    } catch (e) {
-      console.error('[AccessAgent] tts.speak threw:', e);
-    }
-  };
-
-  // Try to pick a good voice, but ALWAYS speak even if voice lookup fails
-  try {
-    chrome.tts.getVoices((voices) => {
-      if (!voices || voices.length === 0) {
-        doSpeak(null);
-        return;
-      }
-
-      // Check preference list
-      for (const pref of VOICE_PREFS) {
-        const match = voices.find(v => v.voiceName === pref);
-        if (match) {
-          doSpeak(match.voiceName);
-          return;
+    chrome.tts.speak(text, {
+      rate: 1.05,
+      pitch: 1.1,
+      volume: 1.0,
+      voiceName: 'Samantha',
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn('[AccessAgent] TTS voice failed, retrying default:', chrome.runtime.lastError.message);
+        // Samantha not available — retry with no voice name (system default)
+        try {
+          chrome.tts.speak(text, { rate: 1.05, pitch: 1.1, volume: 1.0 }, () => {
+            if (chrome.runtime.lastError) {
+              console.error('[AccessAgent] TTS default also failed:', chrome.runtime.lastError.message);
+            }
+          });
+        } catch (e2) {
+          console.error('[AccessAgent] TTS retry threw:', e2);
         }
       }
-
-      // Fall back to any English voice
-      const english = voices.find(v => v.lang?.startsWith('en'));
-      doSpeak(english?.voiceName || null);
     });
   } catch (e) {
-    // getVoices failed — speak with system default
-    console.warn('[AccessAgent] getVoices failed:', e);
-    doSpeak(null);
+    console.error('[AccessAgent] tts.speak threw:', e);
   }
 }
 
@@ -496,17 +460,26 @@ async function ensureGestureOffscreen() {
  */
 async function toggleGestureMode(enabled) {
   if (enabled) {
-    await ensureGestureOffscreen();
-    const response = await chrome.runtime.sendMessage({ type: 'GESTURE_START' });
-    if (response?.success) {
-      handleSpeak({ text: 'Gesture control on. I can see your hand.' });
-      await chrome.storage.local.set({ 'accessagent_gestures_enabled': true });
-    } else {
-      handleSpeak({ text: response?.error || 'Could not start gesture control.' });
+    try {
+      await ensureGestureOffscreen();
+      // Small delay to let offscreen document initialize
+      await new Promise(r => setTimeout(r, 500));
+      const response = await chrome.runtime.sendMessage({ type: 'GESTURE_START' });
+      if (response?.success) {
+        handleSpeak({ text: 'Gesture control on. I can see your hand.' });
+      } else {
+        handleSpeak({ text: response?.error || 'Could not start gesture control.' });
+      }
+    } catch (err) {
+      console.warn('[AccessAgent] Gesture toggle failed:', err.message);
+      handleSpeak({ text: 'Gesture control could not start. Try again.' });
     }
+    await chrome.storage.local.set({ 'accessagent_gestures_enabled': true });
     return { success: true, enabled: true };
   } else {
-    await chrome.runtime.sendMessage({ type: 'GESTURE_STOP' });
+    try {
+      await chrome.runtime.sendMessage({ type: 'GESTURE_STOP' });
+    } catch { /* offscreen might not exist */ }
     handleSpeak({ text: 'Gesture control off.' });
     await chrome.storage.local.set({ 'accessagent_gestures_enabled': false });
     return { success: true, enabled: false };

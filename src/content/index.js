@@ -501,6 +501,10 @@ function activateVoiceFromBar(bar) {
       chrome.runtime.sendMessage({
         type: MESSAGE_TYPES.SPEAK,
         payload: { text: 'Speech recognition is not available in this browser. Try using Chrome.', rate: 0.9 },
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[AccessAgent] SPEAK failed:', chrome.runtime.lastError.message);
+        }
       });
       return;
     }
@@ -510,7 +514,11 @@ function activateVoiceFromBar(bar) {
 
   chrome.runtime.sendMessage({
     type: MESSAGE_TYPES.SPEAK,
-    payload: { text: 'Start talking, I\'m listening.', rate: 0.9 },
+    payload: { text: 'Start talking, I\'m listening.' },
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.error('[AccessAgent] SPEAK failed:', chrome.runtime.lastError.message);
+    }
   });
 }
 

@@ -741,11 +741,15 @@ async function executeIntent(intent, tabId) {
       };
 
     case 'enable_gestures':
-      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: true } });
+      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: true } }, () => {
+        if (chrome.runtime.lastError) console.warn('[AccessAgent] Gesture enable msg:', chrome.runtime.lastError.message);
+      });
       return { confirmation: 'Enabling gesture control. Show your hand to the camera.', action: null };
 
     case 'disable_gestures':
-      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: false } });
+      chrome.runtime.sendMessage({ type: 'TOGGLE_GESTURES', payload: { enabled: false } }, () => {
+        if (chrome.runtime.lastError) console.warn('[AccessAgent] Gesture disable msg:', chrome.runtime.lastError.message);
+      });
       return { confirmation: 'Gesture control disabled.', action: null };
 
     case 'stop_speaking':
