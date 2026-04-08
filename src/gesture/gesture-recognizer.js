@@ -45,10 +45,14 @@ let lastActionTime = 0;
  * Initialize the MediaPipe gesture recognizer.
  */
 async function initRecognizer() {
+  if (recognizer) return; // Already initialized
+
+  console.info('[AccessAgent] Loading MediaPipe model...');
   const vision = await FilesetResolver.forVisionTasks(
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
   );
 
+  console.info('[AccessAgent] MediaPipe WASM loaded, creating recognizer...');
   recognizer = await GestureRecognizer.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
@@ -58,7 +62,7 @@ async function initRecognizer() {
     numHands: 1,
   });
 
-  console.info('[AccessAgent] Gesture recognizer initialized');
+  console.info('[AccessAgent] Gesture recognizer ready');
 }
 
 /**
@@ -78,20 +82,22 @@ async function startCamera() {
   }
 
   try {
+    console.info('[AccessAgent] Requesting camera access...');
     stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 320, height: 240, facingMode: 'user' },
     });
+    console.info('[AccessAgent] Camera access granted');
     videoElement.srcObject = stream;
     await videoElement.play();
     isRunning = true;
-    detectLoop();
     console.info('[AccessAgent] Gesture camera started');
   } catch (err) {
-    console.error('[AccessAgent] Camera access failed:', err.message);
+    console.error('[AccessAgent] Camera access failed:', err.name, err.message);
     chrome.runtime.sendMessage({
       type: 'GESTURE_ERROR',
-      payload: { error: 'Camera access denied. Enable camera permission for gesture control.' },
-    });
+      payload: { error: `Camera failed: ${err.name}. Go to chrome://settings/content/camera and allow this extension.` },
+    }, () => { if (chrome.runtime.lastError) { /* ignore */ } });
+    throw err;
   }
 }
 
@@ -201,10 +207,17 @@ function processFrame(timestamp) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   switch (message.type) {
     case 'GESTURE_START':
-      initRecognizer()
-        .then(() => startCamera())
-        .then(() => sendResponse({ success: true }))
-        .catch(err => sendResponse({ success: false, error: err.message }));
+      // Start camera FIRST (triggers permission prompt), then load model
+      startCamera()
+        .then(() => initRecognizer())
+        .then(() => {
+          detectLoop();
+          sendResponse({ success: true });
+        })
+        .catch(err => {
+          console.error('[AccessAgent] Gesture start failed:', err);
+          sendResponse({ success: false, error: err.message });
+        });
       return true;
 
     case 'GESTURE_STOP':
