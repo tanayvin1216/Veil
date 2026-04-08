@@ -47,13 +47,32 @@
       letter-spacing: -0.03em;
     }
 
-    #waiting-message {
+    #start-btn {
+      display: block;
+      width: 100%;
+      font-family: inherit;
       font-size: 20px;
       font-weight: 600;
       padding: 32px;
       border: 2px solid #1A1A1A;
+      background: #1A1A1A;
+      color: #FAFAF8;
       text-align: center;
+      cursor: pointer;
       margin-bottom: 32px;
+    }
+
+    #start-btn:hover {
+      background: #333;
+    }
+
+    #start-btn:focus-visible {
+      outline: 3px solid #2D5A27;
+      outline-offset: 2px;
+    }
+
+    #start-btn.hidden {
+      display: none;
     }
 
     #tutorial-content {
@@ -139,6 +158,23 @@
       font-weight: 500;
     }
 
+    #speaking-indicator {
+      display: none;
+      padding: 12px 16px;
+      background: #2D5A27;
+      color: #FAFAF8;
+      font-size: 14px;
+      font-weight: 500;
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      z-index: 999;
+    }
+
+    #speaking-indicator.active {
+      display: block;
+    }
+
     :focus-visible {
       outline: 3px solid #2D5A27;
       outline-offset: 2px;
@@ -147,10 +183,6 @@
     @media (prefers-contrast: high) {
       body { background: #fff; color: #000; }
       kbd { background: #eee; border-color: #000; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      * { transition: none !important; }
     }
   </style>
 </head>
@@ -162,9 +194,9 @@
       <h1 class="brand-name">AccessAgent</h1>
     </div>
 
-    <div id="waiting-message" role="alert" aria-live="assertive" tabindex="0">
-      Press any key or click anywhere to start the tutorial.
-    </div>
+    <button id="start-btn" autofocus>
+      Press Enter or click here to start the tutorial
+    </button>
 
     <div id="tutorial-content" aria-live="polite">
 
@@ -183,27 +215,27 @@
       <h2>Keyboard Shortcuts</h2>
       <ul class="shortcut-list" aria-label="Keyboard shortcuts">
         <li>
-          <kbd>Control + Shift + A</kbd>
+          <kbd id="shortcut-a">Control + Shift + A</kbd>
           <span>Toggle voice agent on and off</span>
         </li>
         <li>
-          <kbd>Control + Shift + S</kbd>
+          <kbd id="shortcut-s">Control + Shift + S</kbd>
           <span>Hear a summary of the current page</span>
         </li>
         <li>
-          <kbd>Control + Shift + M</kbd>
+          <kbd id="shortcut-m">Control + Shift + M</kbd>
           <span>What Am I Missing? accessibility gap report</span>
         </li>
       </ul>
-      <p>
+      <p id="shortcut-note">
         On Windows or Linux, use Alt instead of Control.
         You can customize these shortcuts at any time by visiting
-        chrome extensions shortcuts in your browser settings.
+        chrome://extensions/shortcuts in your browser settings.
       </p>
 
       <h2>Voice Agent</h2>
       <p>
-        Press Control + Shift + A to activate the voice agent.
+        Press <span class="mod-key">Control</span> + Shift + A to activate the voice agent.
         Then speak naturally. Here are some things you can say:
       </p>
 
@@ -248,19 +280,19 @@
         AccessAgent collects no data. No analytics. No tracking.
         If you add an API key for Tier 3, page content is sent to your
         chosen provider only. Your API key never leaves your device.
-        The voice agent can run fully on-device with the Whisper option
-        in settings.
       </p>
 
       <div class="done-section">
         <p>
           That's everything. AccessAgent is now running on every website you visit.
           Close this tab and browse normally — repairs happen automatically.
-          Press Control + Shift + A any time to talk to your voice agent.
+          Press <span class="mod-key">Control</span> + Shift + A any time to talk to your voice agent.
         </p>
       </div>
 
     </div>
+
+    <div id="speaking-indicator" aria-hidden="true">Speaking...</div>
 
   </div>
 
@@ -268,94 +300,105 @@
     const isMac = navigator.platform.toUpperCase().includes('MAC');
     const modKey = isMac ? 'Control' : 'Alt';
 
-    const waitingMessage = document.getElementById('waiting-message');
+    // Update text to show correct modifier key
+    if (!isMac) {
+      document.getElementById('shortcut-a').textContent = 'Alt + Shift + A';
+      document.getElementById('shortcut-s').textContent = 'Alt + Shift + S';
+      document.getElementById('shortcut-m').textContent = 'Alt + Shift + M';
+      document.querySelectorAll('.mod-key').forEach(el => el.textContent = 'Alt');
+    }
+
+    const startBtn = document.getElementById('start-btn');
     const tutorialContent = document.getElementById('tutorial-content');
+    const speakingIndicator = document.getElementById('speaking-indicator');
     let tutorialStarted = false;
 
-    // Tutorial steps as spoken text
     const tutorialSteps = [
-      'Welcome to AccessAgent. Your personal accessibility agent is now installed.',
+      'Welcome to AccessAgent. Your personal accessibility agent is now installed and running.',
 
       'AccessAgent automatically repairs every website you visit. ' +
       'It fixes missing image descriptions, labels unlabeled buttons, ' +
-      'repairs heading structure, dismisses cookie popups, and detects CAPTCHAs.',
+      'repairs heading structure, dismisses cookie popups, and detects CAPTCHAs. ' +
+      'You do not need to do anything. It works automatically.',
 
-      'Here are your keyboard shortcuts. ' +
-      modKey + ' plus Shift plus A toggles the voice agent on and off. ' +
-      modKey + ' plus Shift plus S reads a summary of the current page. ' +
-      modKey + ' plus Shift plus M gives you the What Am I Missing accessibility gap report.',
+      'Here are your three keyboard shortcuts. ' +
+      modKey + ' plus Shift plus A. This toggles the voice agent on and off. ' +
+      modKey + ' plus Shift plus S. This reads a summary of the current page. ' +
+      modKey + ' plus Shift plus M. This gives you the What Am I Missing accessibility gap report.',
 
       'To use the voice agent, press ' + modKey + ' plus Shift plus A, then speak naturally. ' +
-      'You can say things like: click a button name, scroll down, next heading, ' +
-      'what is on this page, fill a field with a value, dismiss this popup, or help.',
+      'You can say things like: click followed by a button name. Scroll down. Next heading. ' +
+      'What is on this page. Fill a field with a value. Dismiss this popup. Go back. Or help.',
 
-      'AccessAgent has three tiers. ' +
+      'AccessAgent has three repair tiers. ' +
       'Tier 1 runs instantly on every page with no internet needed. ' +
-      'Tier 2 handles cookie banners and CAPTCHAs. ' +
-      'Tier 3 uses AI to describe visual content, but requires an API key in settings.',
+      'Tier 2 handles cookie banners and CAPTCHAs automatically. ' +
+      'Tier 3 uses AI to describe visual content, but requires an API key you can add in settings.',
 
-      'Privacy. AccessAgent collects no data. No analytics. No tracking. ' +
-      'Your API key never leaves your device.',
+      'About privacy. AccessAgent collects zero data. No analytics. No tracking. ' +
+      'Your API key stays on your device and is never shared.',
 
-      'That is everything. AccessAgent is now running. ' +
-      'Close this tab and browse normally. Repairs happen automatically. ' +
-      'Press ' + modKey + ' plus Shift plus A any time to talk to your voice agent.',
+      'That is everything you need to know. AccessAgent is now active. ' +
+      'Close this tab and browse the web normally. All repairs happen automatically. ' +
+      'Press ' + modKey + ' plus Shift plus A any time to talk to your voice agent. ' +
+      'Say help at any time to hear all available voice commands.',
     ];
-
-    let currentStep = 0;
 
     function startTutorial() {
       if (tutorialStarted) return;
       tutorialStarted = true;
 
-      waitingMessage.style.display = 'none';
+      startBtn.classList.add('hidden');
       tutorialContent.classList.add('visible');
 
-      speakStep(0);
+      // Cancel any previous speech
+      window.speechSynthesis.cancel();
+
+      // Small delay to ensure user gesture is registered
+      setTimeout(() => speakStep(0), 200);
     }
 
     function speakStep(index) {
-      if (index >= tutorialSteps.length) return;
-      currentStep = index;
+      if (index >= tutorialSteps.length) {
+        speakingIndicator.classList.remove('active');
+        return;
+      }
+
+      speakingIndicator.classList.add('active');
+      speakingIndicator.textContent = 'Speaking step ' + (index + 1) + ' of ' + tutorialSteps.length;
 
       const utterance = new SpeechSynthesisUtterance(tutorialSteps[index]);
-      utterance.rate = 0.95;
+      utterance.rate = 0.9;
       utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
       utterance.onend = () => {
-        // Small pause between steps
-        setTimeout(() => {
-          speakStep(index + 1);
-        }, 600);
+        setTimeout(() => speakStep(index + 1), 800);
       };
 
-      utterance.onerror = () => {
-        // Try next step if one fails
-        setTimeout(() => speakStep(index + 1), 300);
+      utterance.onerror = (event) => {
+        console.error('Speech error on step', index, event.error);
+        setTimeout(() => speakStep(index + 1), 400);
       };
 
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
     }
 
-    // Wait for any keypress or click to start
-    function onActivate() {
-      document.removeEventListener('keydown', onActivate);
-      document.removeEventListener('click', onActivate);
-      startTutorial();
-    }
+    // The button is the primary activation — requires user gesture for speech
+    startBtn.addEventListener('click', startTutorial);
+    startBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        startTutorial();
+      }
+    });
 
-    document.addEventListener('keydown', onActivate);
-    document.addEventListener('click', onActivate);
-
-    // Also speak the waiting message immediately so screen reader users hear it
-    window.addEventListener('load', () => {
-      waitingMessage.focus();
-      const intro = new SpeechSynthesisUtterance(
-        'AccessAgent installed successfully. Press any key or click anywhere to start the tutorial.'
-      );
-      intro.rate = 0.95;
-      speechSynthesis.speak(intro);
+    // Also allow any key on the page to start
+    document.addEventListener('keydown', (e) => {
+      if (!tutorialStarted) {
+        startTutorial();
+      }
     });
   </script>
 </body>
