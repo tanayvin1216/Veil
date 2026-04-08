@@ -17,7 +17,7 @@ let conversationHistory = [];
  */
 async function navigateAndAnnounce(tabId, url) {
   await chrome.storage.local.set({ 'accessagent_pending_announce': true });
-  await navigateAndAnnounce(tabId, url);
+  await chrome.tabs.update(tabId, { url });
 }
 
 
@@ -175,6 +175,13 @@ export function classifyIntentRuleBased(text) {
 
   if (/^(stop|quiet|shut up|silence|cancel)$/i.test(text)) {
     return { intent: 'stop_speaking', confidence: 0.95 };
+  }
+
+  // Single word or short phrase — treat as navigation keyword
+  // "residential", "admissions", "contact us" etc.
+  const words = text.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+  if (words.length > 0 && words.length <= 4) {
+    return { intent: 'navigate_smart', target: text, confidence: 0.85 };
   }
 
   return { intent: 'unknown', rawText: text, confidence: 0.3 };

@@ -285,21 +285,6 @@ function describeViewport() {
     parts.push('Buttons: ' + visibleButtons.join(', '));
   }
 
-  // Find visible images
-  const images = document.querySelectorAll('img');
-  const visibleImages = [];
-  for (const img of images) {
-    const rect = img.getBoundingClientRect();
-    if (rect.top < viewportHeight && rect.bottom > 0 && rect.width > 50) {
-      const alt = img.alt || img.getAttribute('aria-label') || 'unlabeled image';
-      visibleImages.push(alt);
-    }
-    if (visibleImages.length >= 5) break;
-  }
-  if (visibleImages.length > 0) {
-    parts.push('Images: ' + visibleImages.join(', '));
-  }
-
   // Find visible form fields
   const inputs = document.querySelectorAll('input:not([type="hidden"]), textarea, select');
   const visibleInputs = [];
