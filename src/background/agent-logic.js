@@ -63,7 +63,7 @@ export function classifyIntentRuleBased(text) {
 
   if (/^(take me to|bring me to|go to section|read the section|read section)\s+/i.test(text)) {
     const target = text.replace(/^(take me to|bring me to|go to section|read the section|read section)\s+/i, '').trim();
-    return { intent: 'scroll_to_section', target, confidence: 0.95 };
+    return { intent: 'navigate_smart', target, confidence: 0.95 };
   }
 
   if (/^(go to|open|navigate to|visit)\s+/i.test(text)) {
@@ -538,6 +538,92 @@ async function executeIntent(intent, tabId) {
       }
       return {
         confirmation: `I couldn't find a section called "${intent.target}" on this page.`,
+        action: null,
+      };
+    }
+
+    case 'navigate_smart': {
+      // Smart navigation: search nav items → links → headings → LLM fallback
+      const pageStructure = await sendMessageToTab(tabId, { type: 'get_page_structure' });
+      const structure = pageStructure?.data;
+      if (!structure) {
+        return { confirmation: 'I can\'t read this page right now.', action: null };
+      }
+
+      const query = intent.target.toLowerCase();
+      const keywords = query.split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+      const allKeywords = keywords.length > 0 ? keywords : [query];
+
+      // 1. Check nav items first (most likely what user wants)
+      for (const item of structure.navItems || []) {
+        const navText = item.text.toLowerCase();
+        if (navText === query || allKeywords.every(k => navText.includes(k))) {
+          await chrome.tabs.update(tabId, { url: item.href });
+          return {
+            confirmation: `Taking you to ${item.text}. I'll describe the page when it loads.`,
+            action: { action: 'navigate', url: item.href },
+          };
+        }
+      }
+
+      // 2. Partial match on nav items
+      for (const item of structure.navItems || []) {
+        const navText = item.text.toLowerCase();
+        if (allKeywords.some(k => navText.includes(k))) {
+          await chrome.tabs.update(tabId, { url: item.href });
+          return {
+            confirmation: `Found ${item.text} in navigation. Taking you there now.`,
+            action: { action: 'navigate', url: item.href },
+          };
+        }
+      }
+
+      // 3. Search all links on the page
+      for (const link of structure.links || []) {
+        const linkText = link.text.toLowerCase();
+        if (linkText === query || allKeywords.every(k => linkText.includes(k))) {
+          await chrome.tabs.update(tabId, { url: link.href });
+          return {
+            confirmation: `Found a link to ${link.text}. Taking you there.`,
+            action: { action: 'navigate', url: link.href },
+          };
+        }
+      }
+
+      // 4. Try scrolling to a heading on this page
+      const scrollResult = await sendMessageToTab(tabId, {
+        type: 'scroll_to_section',
+        payload: { query: intent.target },
+      });
+      if (scrollResult?.success && scrollResult.data) {
+        return { confirmation: scrollResult.data, action: null };
+      }
+
+      // 5. Fuzzy partial match on links
+      for (const link of structure.links || []) {
+        const linkText = (link.text + ' ' + (link.context || '')).toLowerCase();
+        if (allKeywords.some(k => linkText.includes(k))) {
+          await chrome.tabs.update(tabId, { url: link.href });
+          return {
+            confirmation: `Found ${link.text}. Taking you there.`,
+            action: { action: 'navigate', url: link.href },
+          };
+        }
+      }
+
+      // 6. Nothing found locally — try LLM if API key available
+      try {
+        const response = await handleWithLLM(`take me to ${intent.target}`, tabId);
+        if (response.action) return response;
+        if (response.confirmation && !response.confirmation.includes('couldn\'t find')) {
+          return response;
+        }
+      } catch {
+        // No API key or LLM failed — fall through
+      }
+
+      return {
+        confirmation: `I couldn't find "${intent.target}" on this page. Try saying the exact link or heading name.`,
         action: null,
       };
     }
