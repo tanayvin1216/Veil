@@ -39,6 +39,7 @@ module.exports = {
         { from: 'src/ui/settings.html', to: 'ui/settings.html' },
         { from: 'src/ui/settings.css', to: 'ui/settings.css' },
         { from: 'src/ui/welcome.html', to: 'ui/welcome.html' },
+        { from: 'src/ui/welcome.js', to: 'ui/welcome.js' },
         { from: 'src/content/content.css', to: 'content/content.css' },
       ],
     }),

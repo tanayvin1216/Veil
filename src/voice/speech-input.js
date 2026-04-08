@@ -119,6 +119,12 @@ export function startListening() {
   try {
     recognition.start();
   } catch (err) {
+    // "already started" is not a real error — just means we're already listening
+    if (err.message && err.message.includes('already started')) {
+      isListening = true;
+      onStateChangeCallback?.(true);
+      return;
+    }
     logError(CONTEXT, 'Failed to start recognition:', err.message);
   }
 }
