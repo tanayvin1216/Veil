@@ -45,6 +45,15 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   });
 });
 
+// Auto-start gesture recognition if enabled in settings
+chrome.storage.local.get('accessagent_gestures_enabled', (result) => {
+  if (result['accessagent_gestures_enabled']) {
+    ensureGestureOffscreen()
+      .then(() => chrome.runtime.sendMessage({ type: 'GESTURE_START' }))
+      .catch(err => console.warn('[AccessAgent] Gesture auto-start failed:', err.message));
+  }
+});
+
 /**
  * Extension icon click — toggle voice mode. This is the primary activation.
  * No keyboard shortcuts needed. Click the icon, start talking.
