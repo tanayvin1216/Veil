@@ -32,26 +32,13 @@ module.exports = {
 
     new CopyWebpackPlugin({
       patterns: [
-        {
-          from: 'src/ui/popup.html',
-          to: 'ui/popup.html',
-        },
-        {
-          from: 'src/ui/popup.css',
-          to: 'ui/popup.css',
-        },
-        {
-          from: 'src/ui/settings.html',
-          to: 'ui/settings.html',
-        },
-        {
-          from: 'src/ui/settings.css',
-          to: 'ui/settings.css',
-        },
-        {
-          from: 'src/content/content.css',
-          to: 'content/content.css',
-        },
+        { from: 'manifest.json', to: 'manifest.json' },
+        { from: 'assets', to: 'assets' },
+        { from: 'src/ui/popup.html', to: 'ui/popup.html' },
+        { from: 'src/ui/popup.css', to: 'ui/popup.css' },
+        { from: 'src/ui/settings.html', to: 'ui/settings.html' },
+        { from: 'src/ui/settings.css', to: 'ui/settings.css' },
+        { from: 'src/content/content.css', to: 'content/content.css' },
       ],
     }),
   ],
