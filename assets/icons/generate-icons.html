@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Icon Generator</title>
+</head>
+<body>
+<canvas id="c16" width="16" height="16"></canvas>
+<canvas id="c32" width="32" height="32"></canvas>
+<canvas id="c48" width="48" height="48"></canvas>
+<canvas id="c128" width="128" height="128"></canvas>
+<script>
+function drawIcon(canvas) {
+  const ctx = canvas.getContext('2d');
+  const s = canvas.width;
+  // Background
+  ctx.fillStyle = '#1A1A1A';
+  ctx.fillRect(0, 0, s, s);
+  // Letter A
+  ctx.fillStyle = '#FAFAF8';
+  ctx.font = `bold ${s * 0.65}px monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('A', s/2, s/2 + s*0.02);
+  // Accent dot
+  ctx.fillStyle = '#2D5A27';
+  ctx.beginPath();
+  ctx.arc(s * 0.78, s * 0.22, s * 0.08, 0, Math.PI * 2);
+  ctx.fill();
+}
+[16, 32, 48, 128].forEach(size => {
+  drawIcon(document.getElementById('c' + size));
+});
+</script>
+<p>Right-click each canvas and save as icon-{size}.png</p>
+</body>
+</html>
