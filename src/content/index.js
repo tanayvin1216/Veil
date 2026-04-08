@@ -385,70 +385,47 @@ function handleToggleVoice() {
 }
 
 /**
- * Build page summary text that actually describes WHAT THE PAGE IS ABOUT.
- * A blind user needs to understand the content, not count DOM elements.
+ * Build a short page summary — 2-3 sentences max.
+ * Just enough for a blind user to know where they are and what this page is about.
  * @returns {string}
  */
 function buildPageSummaryText() {
   const title = document.title || 'Unknown page';
-  const parts = [];
 
-  // What page is this
-  parts.push(`You are on: ${title}.`);
-
-  // Meta description — often the best one-line summary
+  // Best single-line description of the page
   const metaDesc = document.querySelector('meta[name="description"]')?.content?.trim();
-  if (metaDesc) {
-    parts.push(metaDesc);
-  }
 
-  // Main heading — what the page is actually about
-  const h1 = document.querySelector('h1');
-  if (h1?.textContent?.trim()) {
-    const h1Text = h1.textContent.trim();
-    if (h1Text !== title) {
-      parts.push(`Main heading: ${h1Text}.`);
+  // Main heading if different from title
+  const h1 = document.querySelector('h1')?.textContent?.trim() || '';
+  const heading = (h1 && h1 !== title) ? h1 : '';
+
+  // Section topics from subheadings — just the first few words
+  const sections = Array.from(document.querySelectorAll('h2'))
+    .slice(0, 5)
+    .map(h => h.textContent?.trim())
+    .filter(t => t && t.length < 80);
+
+  // Build it — short and direct
+  let summary = title + '. ';
+
+  if (metaDesc) {
+    summary += metaDesc;
+  } else if (heading) {
+    summary += heading + '.';
+  } else {
+    // Grab the first real paragraph as fallback
+    const firstP = document.querySelector('main p, article p, #content p, p');
+    const pText = firstP?.textContent?.trim() || '';
+    if (pText.length > 20) {
+      summary += pText.substring(0, 150) + '.';
     }
   }
 
-  // Page structure via subheadings — gives the user a table of contents
-  const subheadings = Array.from(document.querySelectorAll('h2'))
-    .slice(0, 8)
-    .map(h => h.textContent?.trim())
-    .filter(t => t && t.length < 100);
-  if (subheadings.length > 0) {
-    parts.push(`This page covers: ${subheadings.join('. ')}.`);
+  if (sections.length > 0) {
+    summary += ' Sections: ' + sections.join(', ') + '.';
   }
 
-  // Actual page content — read the first meaningful paragraphs
-  const mainContent = document.querySelector('main, [role="main"], article, #content, #main-content, .content');
-  const contentRoot = mainContent || document.body;
-  const paragraphs = Array.from(contentRoot.querySelectorAll('p'))
-    .map(p => p.textContent?.trim())
-    .filter(t => t && t.length > 40 && t.length < 500)
-    .slice(0, 3);
-
-  if (paragraphs.length > 0) {
-    parts.push(paragraphs.join(' '));
-  }
-
-  // Images without descriptions — tell the user what they're missing
-  const imagesNoAlt = document.querySelectorAll('img:not([alt]), img[alt=""], img[alt="Image (no description available)"]');
-  if (imagesNoAlt.length > 0) {
-    parts.push(`There are ${imagesNoAlt.length} images on this page without descriptions. Say "what am I missing" for details.`);
-  }
-
-  // If there's a form, mention it
-  const forms = document.querySelectorAll('form');
-  if (forms.length > 0) {
-    const formInputs = document.querySelectorAll('input:not([type="hidden"]), textarea, select');
-    parts.push(`This page has a form with ${formInputs.length} fields.`);
-  }
-
-  // Navigation hint
-  parts.push('Say "next heading" to navigate by section, or "help" for all voice commands.');
-
-  return parts.join(' ');
+  return summary;
 }
 
 // ─── Bootstrap ─────────────────────────────────────────────
