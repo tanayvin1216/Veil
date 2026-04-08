@@ -70,12 +70,13 @@ function createEmptyReport() {
  * @returns {number} Number of images repaired
  */
 export function repairImages(doc) {
-  const images = doc.querySelectorAll('img:not([alt]), img[alt=""]');
+  // Only target images truly missing alt — img[alt=""] is intentionally decorative
+  const images = doc.querySelectorAll('img:not([alt])');
   let repaired = 0;
 
   for (const img of images) {
     const altText = inferImageAlt(img);
-    if (altText && setAriaIfMissing(img, 'alt', altText)) {
+    if (altText) {
       img.setAttribute('alt', altText);
       repaired++;
     }
@@ -511,7 +512,11 @@ export function repairFocusTraps(doc) {
         modal.setAttribute('aria-hidden', 'true');
       });
 
-      modal.style.position = modal.style.position || 'relative';
+      // Only set position if computed position is static (avoid clobbering fixed/absolute modals)
+      const computedPosition = window.getComputedStyle(modal).position;
+      if (computedPosition === 'static') {
+        modal.style.position = 'relative';
+      }
       modal.insertBefore(closeButton, modal.firstChild);
       repaired++;
     }
@@ -564,10 +569,11 @@ function getVisibleText(el) {
     if (child.nodeType === Node.TEXT_NODE) {
       text += child.textContent;
     } else if (child.nodeType === Node.ELEMENT_NODE) {
-      const style = window.getComputedStyle(child);
-      if (style.display !== 'none' && style.visibility !== 'hidden') {
-        text += getVisibleText(child);
-      }
+      // Avoid getComputedStyle in loops — check attributes and inline style only
+      if (child.hidden) continue;
+      if (child.getAttribute('aria-hidden') === 'true') continue;
+      if (child.style?.display === 'none' || child.style?.visibility === 'hidden') continue;
+      text += getVisibleText(child);
     }
   }
 

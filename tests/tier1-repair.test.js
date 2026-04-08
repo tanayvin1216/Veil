@@ -85,10 +85,11 @@ describe('Tier 1 DOM Repair', () => {
       expect(alt).toBe('Image (no description available)');
     });
 
-    test('handles empty alt attribute', () => {
+    test('skips decorative images with empty alt attribute', () => {
+      // img[alt=""] is intentionally decorative per WCAG 1.1.1 — do not override
       document.body.innerHTML = '<img src="/photos/cute-puppy.jpg" alt="">';
       const count = repairImages(document);
-      expect(count).toBe(1);
+      expect(count).toBe(0);
     });
 
     test('adds alt from parent link text', () => {

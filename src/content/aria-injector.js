@@ -68,7 +68,11 @@ export function setHeadingLevel(element, level) {
     return false;
   }
 
-  element.setAttribute('role', 'heading');
+  // Only add role="heading" if the element isn't already a native heading
+  const isNativeHeading = /^H[1-6]$/i.test(element.tagName);
+  if (!isNativeHeading) {
+    element.setAttribute('role', 'heading');
+  }
   element.setAttribute('aria-level', String(level));
   markAsRepaired(element, 'heading-level');
   debug(CONTEXT, `Fixed heading level to ${level} on <${element.tagName}>`);
