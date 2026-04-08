@@ -1,0 +1,75 @@
+{
+  "manifest_version": 3,
+  "name": "AccessAgent",
+  "version": "1.0.0",
+  "description": "Personal Accessibility Agent — automatically repairs web accessibility and provides voice-controlled navigation for blind and low-vision users.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "tts"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "dist/background/service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["dist/content/index.js"],
+      "css": ["dist/content/content.css"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_popup": "dist/ui/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    },
+    "default_title": "AccessAgent"
+  },
+  "options_page": "dist/ui/settings.html",
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  "commands": {
+    "toggle-voice-agent": {
+      "suggested_key": {
+        "default": "Alt+Shift+A",
+        "mac": "Alt+Shift+A"
+      },
+      "description": "Toggle voice agent listening"
+    },
+    "page-summary": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Hear page summary"
+    },
+    "what-am-i-missing": {
+      "suggested_key": {
+        "default": "Alt+Shift+M",
+        "mac": "Alt+Shift+M"
+      },
+      "description": "What Am I Missing report"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/sounds/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
