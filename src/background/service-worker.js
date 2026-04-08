@@ -338,8 +338,22 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
+/** Warm, human-sounding voice preferences (tried in order) */
+const VOICE_PREFS = [
+  'Google UK English Female',
+  'Samantha',
+  'Karen',
+  'Moira',
+  'Google US English',
+  'Tessa',
+  'Fiona',
+  'Victoria',
+  'Microsoft Zira',
+];
+
 /**
- * Speak text using chrome.tts. Dead simple — no async, no promises.
+ * Speak text using chrome.tts with voice selection.
+ * Voice lookup is callback-based (not async) so it can't silently fail.
  * @param {object} payload
  */
 function handleSpeak(payload) {
@@ -354,18 +368,54 @@ function handleSpeak(payload) {
     console.warn('[AccessAgent] tts.stop failed:', e);
   }
 
+  const doSpeak = (voiceName) => {
+    const opts = { rate: 1.05, pitch: 1.1, volume: 1.0 };
+    if (voiceName) opts.voiceName = voiceName;
+
+    try {
+      chrome.tts.speak(text, opts, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
+          // If the named voice failed, retry without it
+          if (voiceName) {
+            chrome.tts.speak(text, { rate: 1.05, pitch: 1.1, volume: 1.0 }, () => {
+              if (chrome.runtime.lastError) {
+                console.error('[AccessAgent] TTS retry failed:', chrome.runtime.lastError.message);
+              }
+            });
+          }
+        }
+      });
+    } catch (e) {
+      console.error('[AccessAgent] tts.speak threw:', e);
+    }
+  };
+
+  // Try to pick a good voice, but ALWAYS speak even if voice lookup fails
   try {
-    chrome.tts.speak(text, {
-      rate: 1.05,
-      pitch: 1.1,
-      volume: 1.0,
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
+    chrome.tts.getVoices((voices) => {
+      if (!voices || voices.length === 0) {
+        doSpeak(null);
+        return;
       }
+
+      // Check preference list
+      for (const pref of VOICE_PREFS) {
+        const match = voices.find(v => v.voiceName === pref);
+        if (match) {
+          doSpeak(match.voiceName);
+          return;
+        }
+      }
+
+      // Fall back to any English voice
+      const english = voices.find(v => v.lang?.startsWith('en'));
+      doSpeak(english?.voiceName || null);
     });
   } catch (e) {
-    console.error('[AccessAgent] tts.speak threw:', e);
+    // getVoices failed — speak with system default
+    console.warn('[AccessAgent] getVoices failed:', e);
+    doSpeak(null);
   }
 }
 
