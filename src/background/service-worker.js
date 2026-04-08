@@ -73,9 +73,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case MESSAGE_TYPES.SPEAK:
-      handleSpeak(message.payload);
-      sendResponse({ success: true });
-      return false;
+      handleSpeak(message.payload).then(() => sendResponse({ success: true }));
+      return true;
 
     case MESSAGE_TYPES.STOP_SPEAKING:
       chrome.tts.stop();
@@ -104,7 +103,9 @@ chrome.commands.onCommand.addListener(async (command) => {
       case 'toggle-voice-agent': {
         const voiceResult = await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
         if (voiceResult?.message) {
-          handleSpeak({ text: voiceResult.message, rate: 1.0 });
+          await handleSpeak({ text: voiceResult.message });
+        } else {
+          await handleSpeak({ text: 'Voice agent toggled.' });
         }
         break;
       }
@@ -112,7 +113,9 @@ chrome.commands.onCommand.addListener(async (command) => {
       case 'page-summary': {
         const summaryResult = await chrome.tabs.sendMessage(activeTab.id, { type: 'get_page_summary' });
         if (summaryResult?.data) {
-          handleSpeak({ text: summaryResult.data, rate: 1.0 });
+          await handleSpeak({ text: summaryResult.data });
+        } else {
+          await handleSpeak({ text: 'Could not read this page.' });
         }
         break;
       }
@@ -120,7 +123,9 @@ chrome.commands.onCommand.addListener(async (command) => {
       case 'what-am-i-missing': {
         const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });
         if (result?.data) {
-          handleSpeak({ text: result.data, rate: 1.0 });
+          await handleSpeak({ text: result.data });
+        } else {
+          await handleSpeak({ text: 'Could not analyze this page.' });
         }
         break;
       }
@@ -128,7 +133,7 @@ chrome.commands.onCommand.addListener(async (command) => {
   } catch (err) {
     console.error('[AccessAgent] Command failed:', command, err.message);
     // Content script not loaded on this page — speak error via TTS
-    handleSpeak({
+    await handleSpeak({
       text: 'AccessAgent is not available on this page. Try a regular website.',
       rate: 1.0,
     });
@@ -227,13 +232,13 @@ async function handleVoiceCommand(payload) {
     console.info('[AccessAgent] Voice response:', response?.confirmation?.substring(0, 80));
 
     if (response.confirmation && !response.silent) {
-      handleSpeak({ text: response.confirmation, rate: 0.9 });
+      await handleSpeak({ text: response.confirmation, rate: 0.9 });
     }
 
     return { success: true, data: response };
   } catch (err) {
     console.error('[AccessAgent] Voice command failed:', err);
-    handleSpeak({ text: 'Sorry, something went wrong. Try again.', rate: 0.9 });
+    await handleSpeak({ text: 'Sorry, something went wrong. Try again.', rate: 0.9 });
     return { success: false, error: err.message };
   }
 }
@@ -260,61 +265,68 @@ async function handleToggle(payload) {
 
 /** Cached preferred voice name */
 let preferredVoice = null;
-let voiceSearchDone = false;
+
+/** Ranked preference — warm, natural, calm voices */
+const PREFERRED_VOICES = [
+  'Google UK English Female',
+  'Google US English',
+  'Samantha',
+  'Karen',
+  'Moira',
+  'Tessa',
+  'Fiona',
+  'Victoria',
+  'Microsoft Zira',
+];
 
 /**
  * Find the best natural-sounding voice available.
- * Prefers: Google UK English Female > Samantha > Karen > any English female > default
+ * @returns {Promise<string|null>}
  */
 function findBestVoice() {
-  if (voiceSearchDone) return;
-  voiceSearchDone = true;
-
-  chrome.tts.getVoices((voices) => {
-    if (!voices || voices.length === 0) return;
-
-    // Ranked preference — warm, natural, calm voices
-    const preferred = [
-      'Google UK English Female',
-      'Google US English',
-      'Samantha',
-      'Karen',
-      'Moira',
-      'Tessa',
-      'Fiona',
-      'Victoria',
-      'Microsoft Zira',
-    ];
-
-    for (const name of preferred) {
-      const match = voices.find(v => v.voiceName === name);
-      if (match) {
-        preferredVoice = match.voiceName;
-        console.info('[AccessAgent] Selected voice:', preferredVoice);
+  return new Promise((resolve) => {
+    chrome.tts.getVoices((voices) => {
+      if (!voices || voices.length === 0) {
+        resolve(null);
         return;
       }
-    }
 
-    // Fallback: any English voice that isn't "Google Chrome"
-    const english = voices.find(v =>
-      v.lang?.startsWith('en') && !v.voiceName?.includes('Chrome')
-    );
-    if (english) {
-      preferredVoice = english.voiceName;
-      console.info('[AccessAgent] Fallback voice:', preferredVoice);
-    }
+      for (const name of PREFERRED_VOICES) {
+        const match = voices.find(v => v.voiceName === name);
+        if (match) {
+          preferredVoice = match.voiceName;
+          console.info('[AccessAgent] Selected voice:', preferredVoice);
+          resolve(preferredVoice);
+          return;
+        }
+      }
+
+      // Fallback: any English voice
+      const english = voices.find(v =>
+        v.lang?.startsWith('en') && !v.voiceName?.includes('Chrome')
+      );
+      if (english) {
+        preferredVoice = english.voiceName;
+        console.info('[AccessAgent] Fallback voice:', preferredVoice);
+      }
+      resolve(preferredVoice);
+    });
   });
 }
-
-// Find the best voice on startup
-findBestVoice();
 
 /**
  * Speak text using chrome.tts API with a calm, natural voice.
  * @param {object} payload
  */
-function handleSpeak(payload) {
+async function handleSpeak(payload) {
   const { text, rate = 0.9, pitch = 0.95, voiceName } = payload;
+
+  if (!text) return;
+
+  // Find voice if we haven't yet (service worker may have restarted)
+  if (!preferredVoice && !voiceName) {
+    await findBestVoice();
+  }
 
   chrome.tts.stop();
 
@@ -325,12 +337,12 @@ function handleSpeak(payload) {
     enqueue: false,
   };
 
-  // Use user-specified voice, or our preferred natural voice
   const voice = voiceName || preferredVoice;
   if (voice) {
     options.voiceName = voice;
   }
 
+  console.info('[AccessAgent] Speaking:', text.substring(0, 60), '| voice:', voice || 'default');
   chrome.tts.speak(text, options);
 }
 
