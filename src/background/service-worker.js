@@ -548,14 +548,59 @@ async function handleGestureCommand(payload) {
   const { intent, label, gesture } = payload;
   console.info(`[AccessAgent] Gesture: ${gesture} → ${label}`);
 
-  // Announce the gesture action
-  handleSpeak({ text: label });
+  // STOP — must be instant, no routing
+  if (intent === 'stop_speaking') {
+    try { chrome.tts.stop(); } catch (e) { /* ignore */ }
+    try {
+      chrome.runtime.sendMessage({ type: 'STOP_TTS_AUDIO' }, () => {
+        if (chrome.runtime.lastError) { /* ignore */ }
+      });
+    } catch (e) { /* ignore */ }
+    // Unmute mic
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { type: 'web_speech_stop' }, () => {
+        if (chrome.runtime.lastError) { /* ignore */ }
+      });
+      chrome.tabs.sendMessage(tab.id, { type: 'mute_mic', payload: { muted: false } }, () => {
+        if (chrome.runtime.lastError) { /* ignore */ }
+      });
+    }
+    return { success: true };
+  }
 
   const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const tabId = activeTab?.id;
   if (!tabId) return { success: false, error: 'No active tab' };
 
-  // Special case: toggle voice mode
+  // DESCRIBE SCREEN — what's visible in the current viewport
+  if (intent === 'describe_screen') {
+    try {
+      const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+      if (screenshot) {
+        const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
+        const { analyzePageForNavigation } = await import('./api-client.js');
+        const pageStructure = await chrome.tabs.sendMessage(tabId, { type: 'get_page_structure' });
+        const result = await analyzePageForNavigation(
+          base64,
+          pageStructure?.data || {},
+          'Describe exactly what is visible on screen right now. Be specific and concise.'
+        );
+        if (result.spoken_response) {
+          handleSpeak({ text: result.spoken_response });
+          return { success: true };
+        }
+      }
+    } catch (err) {
+      console.warn('[AccessAgent] Vision describe failed:', err.message);
+    }
+    // Fallback to DOM summary if vision fails
+    const summaryResult = await chrome.tabs.sendMessage(tabId, { type: 'get_page_summary' });
+    handleSpeak({ text: summaryResult?.data || 'I could not read this screen.' });
+    return { success: true };
+  }
+
+  // TOGGLE VOICE
   if (intent === 'toggle_voice') {
     try {
       const result = await chrome.tabs.sendMessage(tabId, { type: 'toggle_voice' });
@@ -566,7 +611,7 @@ async function handleGestureCommand(payload) {
     return { success: true };
   }
 
-  // Route through the voice command pipeline
+  // Everything else — route through voice command pipeline
   const response = await processVoiceCommand(label, tabId);
   if (response.confirmation && !response.silent) {
     handleSpeak({ text: response.confirmation });

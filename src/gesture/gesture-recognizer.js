@@ -22,10 +22,10 @@ const GESTURE_COOLDOWN = 800;
 /** Map MediaPipe gesture names to AccessAgent commands */
 const GESTURE_COMMANDS = {
   'Open_Palm':     { intent: 'stop_speaking', label: 'Stop' },
+  'Victory':       { intent: 'describe_screen', label: 'What is on screen' },
+  'Pointing_Up':   { intent: 'page_summary', label: 'Page summary' },
   'Thumb_Up':      { intent: 'scroll_down', label: 'Scroll down' },
   'Thumb_Down':    { intent: 'go_back', label: 'Go back' },
-  'Pointing_Up':   { intent: 'scroll_up', label: 'Scroll up' },
-  'Victory':       { intent: 'page_summary', label: 'Page summary' },
   'Closed_Fist':   { intent: 'toggle_voice', label: 'Voice mode' },
   'ILoveYou':      { intent: 'help', label: 'Help' },
 };
