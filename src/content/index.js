@@ -52,6 +52,14 @@ async function initialize() {
 
     setupMessageListener();
 
+    // Preload Web Speech API voices (Chrome loads them async)
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        cachedVoice = null; // Reset cache so next speak picks best voice
+      };
+    }
+
     // Auto-activate voice mode for fully hands-free experience
     autoActivateVoice();
 
@@ -197,10 +205,73 @@ function setupMessageListener() {
         });
         return true;
 
+      case 'web_speech_speak':
+        webSpeechSpeak(message.payload?.text);
+        sendResponse({ success: true });
+        return false;
+
+      case 'web_speech_stop':
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        sendResponse({ success: true });
+        return false;
+
       default:
         return false;
     }
   });
+}
+
+/** High-quality voice preferences — British and natural-sounding first */
+const VOICE_PREFS = [
+  'Google UK English Female',
+  'Google UK English Male',
+  'Daniel',
+  'Serena',
+  'Martha',
+  'Google US English',
+  'Samantha',
+  'Karen',
+  'Moira',
+  'Tessa',
+  'Fiona',
+];
+
+/** Cached voice object */
+let cachedVoice = null;
+
+/**
+ * Speak text using Web Speech API with the best available voice.
+ * @param {string} text
+ */
+function webSpeechSpeak(text) {
+  if (!text || !window.speechSynthesis) return;
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
+
+  // Find best voice
+  if (!cachedVoice) {
+    const voices = window.speechSynthesis.getVoices();
+    for (const pref of VOICE_PREFS) {
+      const match = voices.find(v => v.name === pref);
+      if (match) {
+        cachedVoice = match;
+        break;
+      }
+    }
+    // Fallback: any English voice
+    if (!cachedVoice) {
+      cachedVoice = voices.find(v => v.lang?.startsWith('en')) || null;
+    }
+  }
+
+  if (cachedVoice) utterance.voice = cachedVoice;
+
+  window.speechSynthesis.speak(utterance);
 }
 
 /**

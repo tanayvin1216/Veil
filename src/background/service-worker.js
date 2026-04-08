@@ -345,71 +345,31 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text. Tries OpenAI TTS (human voice) first, falls back to chrome.tts.
+ * Speak text via the content script's Web Speech API (higher quality voices).
+ * Falls back to chrome.tts if no active tab.
  */
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
-  // Stop any current speech
-  try { chrome.tts.stop(); } catch (e) { /* ignore */ }
-  try {
-    chrome.runtime.sendMessage({ type: 'STOP_TTS_AUDIO' }, () => {
-      if (chrome.runtime.lastError) { /* offscreen might not exist */ }
-    });
-  } catch (e) { /* ignore */ }
-
-  // Try OpenAI TTS for human-sounding voice
-  speakWithOpenAI(text).catch(() => {
-    // Fall back to chrome.tts
-    chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
-  });
-}
-
-/**
- * Speak using OpenAI TTS API — returns audio played via offscreen document.
- * @param {string} text
- */
-async function speakWithOpenAI(text) {
-  const result = await chrome.storage.local.get([STORAGE_KEYS.API_KEY, STORAGE_KEYS.API_PROVIDER]);
-  const apiKey = result[STORAGE_KEYS.API_KEY];
-  const provider = result[STORAGE_KEYS.API_PROVIDER] || 'openai';
-
-  // Only works with OpenAI keys
-  if (!apiKey || provider !== 'openai') {
-    throw new Error('no_openai_key');
-  }
-
-  const response = await fetch('https://api.openai.com/v1/audio/speech', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'tts-1',
-      input: text,
-      voice: 'fable',
-      response_format: 'mp3',
-      speed: 1.0,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI TTS error: ${response.status}`);
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  const audioData = Array.from(new Uint8Array(arrayBuffer));
-
-  // Ensure offscreen document exists for audio playback
-  await ensureOffscreen();
-
-  // Send audio to offscreen document
-  await chrome.runtime.sendMessage({
-    type: 'PLAY_TTS_AUDIO',
-    audioData,
+  // Send to the active tab's content script for Web Speech API playback
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tabId = tabs?.[0]?.id;
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
+        type: 'web_speech_speak',
+        payload: { text },
+      }, () => {
+        if (chrome.runtime.lastError) {
+          // Content script not ready — fall back to chrome.tts
+          chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
+        }
+      });
+    } else {
+      // No active tab — use chrome.tts
+      chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
+    }
   });
 }
 
