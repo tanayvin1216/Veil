@@ -26,7 +26,7 @@ window.getComputedStyle = jest.fn().mockReturnValue({
 // Mock requestAnimationFrame for aria-injector
 global.requestAnimationFrame = jest.fn(cb => cb());
 
-const { handleCookieBanners, detectCaptchas } = require('../src/content/tier2-smart.js');
+const { handleCookieBanners, detectCaptchas, runTier2Repairs } = require('../src/content/tier2-smart.js');
 
 describe('Tier 2 Smart Repair', () => {
 
@@ -108,6 +108,56 @@ describe('Tier 2 Smart Repair', () => {
       `;
       const result = handleCookieBanners(document);
       expect(result.action).not.toBe('accepted');
+    });
+
+    test('notifies user when only accept option exists', () => {
+      // Use consent-modal class (not cookie-banner) to avoid the
+      // ".cookie-banner button:last-child" reject selector
+      document.body.innerHTML = `
+        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div class="consent-modal">
+          <p>We use cookies</p>
+          <button class="accept-cookies">Accept All Cookies</button>
+          <span>more text</span>
+        </div>
+      `;
+      const result = handleCookieBanners(document);
+      expect(result.handled).toBe(0);
+      expect(result.action).toBe('notified');
+    });
+
+    test('returns detected-only when banner has no actionable buttons', () => {
+      document.body.innerHTML = `
+        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div class="cookie-consent">
+          <p>This site uses cookies for analytics.</p>
+        </div>
+      `;
+      const result = handleCookieBanners(document);
+      expect(result.handled).toBe(0);
+      expect(['detected-only', 'notified']).toContain(result.action);
+    });
+  });
+
+  describe('runTier2Repairs', () => {
+    test('orchestrates cookie and CAPTCHA detection', async () => {
+      document.body.innerHTML = `
+        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="onetrust-banner-sdk">
+          <button id="onetrust-reject-all-handler">Reject All</button>
+        </div>
+      `;
+      const report = await runTier2Repairs(document);
+      expect(report.cookieBanners).toBe(1);
+      expect(report.captchas).toBe(0);
+      expect(report.executionMs).toBeGreaterThanOrEqual(0);
+    });
+
+    test('returns zero counts on clean page', async () => {
+      document.body.innerHTML = '<div>Clean page</div>';
+      const report = await runTier2Repairs(document);
+      expect(report.cookieBanners).toBe(0);
+      expect(report.captchas).toBe(0);
     });
   });
 

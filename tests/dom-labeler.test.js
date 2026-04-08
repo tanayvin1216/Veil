@@ -39,6 +39,7 @@ const {
   getRegistryArray,
   fuzzyMatch,
   getElementById,
+  getDOMElement,
 } = require('../src/content/dom-labeler.js');
 
 describe('DOM Labeler', () => {
@@ -154,11 +155,12 @@ describe('DOM Labeler', () => {
       expect(results[0].element.ariaLabel).toBe('Search');
     });
 
-    test('returns empty for no match', () => {
+    test('returns low confidence for no match', () => {
       const results = fuzzyMatch('nonexistent element xyz');
-      // May still return low-confidence results, or empty
       if (results.length > 0) {
-        expect(results[0].confidence).toBeLessThan(0.5);
+        expect(results[0].confidence).toBeLessThan(0.3);
+      } else {
+        expect(results).toEqual([]);
       }
     });
 
@@ -186,6 +188,25 @@ describe('DOM Labeler', () => {
     test('returns null for invalid ID', () => {
       const entry = getElementById('el-99999');
       expect(entry).toBeNull();
+    });
+  });
+
+  describe('getDOMElement', () => {
+    test('returns the actual HTMLElement for a registered ID', () => {
+      document.body.innerHTML = '<button>Real Button</button>';
+      const registry = buildElementRegistry(document);
+      const id = registry[0].id;
+      const el = getDOMElement(id);
+      expect(el).not.toBeNull();
+      expect(el.tagName).toBe('BUTTON');
+      expect(el.textContent).toBe('Real Button');
+    });
+
+    test('returns null for an unregistered ID', () => {
+      document.body.innerHTML = '<button>Test</button>';
+      buildElementRegistry(document);
+      const el = getDOMElement('el-99999');
+      expect(el).toBeNull();
     });
   });
 });
