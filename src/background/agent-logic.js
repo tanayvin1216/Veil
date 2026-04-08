@@ -690,6 +690,26 @@ async function executeIntent(intent, tabId) {
       return { confirmation: result?.data || 'Unable to generate report.', action: null };
     }
 
+    case 'describe_image': {
+      try {
+        const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+        if (screenshot) {
+          const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
+          const visionResult = await analyzePageForNavigation(
+            base64,
+            {},
+            'Describe the images visible on screen. What do they show?'
+          );
+          if (visionResult.spoken_response) {
+            return { confirmation: visionResult.spoken_response, action: null };
+          }
+        }
+      } catch {
+        // Vision unavailable
+      }
+      return { confirmation: 'I need an API key to describe images. You can add one in settings.', action: null };
+    }
+
     case 'read_main_content': {
       const summaryResult = await sendMessageToTab(tabId, { type: 'get_page_summary' });
       return { confirmation: summaryResult?.data || 'I could not read this page.', action: null };
