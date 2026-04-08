@@ -52,12 +52,12 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     const result = await chrome.tabs.sendMessage(tab.id, { type: 'toggle_voice' });
     if (result?.message) {
-      await handleSpeak({ text: result.message });
+      handleSpeak({ text: result.message });
     } else {
-      await handleSpeak({ text: 'Voice mode activated. Start speaking.' });
+      handleSpeak({ text: 'Voice mode activated. Start speaking.' });
     }
   } catch {
-    await handleSpeak({
+    handleSpeak({
       text: 'AccessAgent cannot run on this page. Go to a regular website first.',
     });
   }
@@ -74,14 +74,14 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       case 'aa-summary': {
         const result = await chrome.tabs.sendMessage(tab.id, { type: 'get_page_summary' });
         if (result?.data) {
-          await handleSpeak({ text: result.data });
+          handleSpeak({ text: result.data });
         }
         break;
       }
       case 'aa-missing': {
         const result = await chrome.tabs.sendMessage(tab.id, { type: 'what_am_i_missing' });
         if (result?.data) {
-          await handleSpeak({ text: result.data });
+          handleSpeak({ text: result.data });
         }
         break;
       }
@@ -90,7 +90,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         break;
     }
   } catch {
-    await handleSpeak({ text: 'Not available on this page.' });
+    handleSpeak({ text: 'Not available on this page.' });
   }
 });
 
@@ -143,8 +143,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case MESSAGE_TYPES.SPEAK:
-      handleSpeak(message.payload).then(() => sendResponse({ success: true }));
-      return true;
+      handleSpeak(message.payload);
+      sendResponse({ success: true });
+      return false;
 
     case MESSAGE_TYPES.STOP_SPEAKING:
       chrome.tts.stop();
@@ -166,16 +167,16 @@ chrome.commands.onCommand.addListener(async (command) => {
   try {
     if (command === 'toggle-voice-agent') {
       const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'toggle_voice' });
-      await handleSpeak({ text: result?.message || 'Voice toggled.' });
+      handleSpeak({ text: result?.message || 'Voice toggled.' });
     } else if (command === 'page-summary') {
       const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'get_page_summary' });
-      await handleSpeak({ text: result?.data || 'Could not read page.' });
+      handleSpeak({ text: result?.data || 'Could not read page.' });
     } else if (command === 'what-am-i-missing') {
       const result = await chrome.tabs.sendMessage(activeTab.id, { type: 'what_am_i_missing' });
-      await handleSpeak({ text: result?.data || 'Could not analyze page.' });
+      handleSpeak({ text: result?.data || 'Could not analyze page.' });
     }
   } catch {
-    await handleSpeak({ text: 'Not available on this page.' });
+    handleSpeak({ text: 'Not available on this page.' });
   }
 });
 
@@ -277,13 +278,13 @@ async function handleVoiceCommand(payload) {
     }
 
     if (response.confirmation && !response.silent) {
-      await handleSpeak({ text: response.confirmation, rate: 0.9 });
+      handleSpeak({ text: response.confirmation, rate: 0.9 });
     }
 
     return { success: true, data: response };
   } catch (err) {
     console.error('[AccessAgent] Voice command failed:', err);
-    await handleSpeak({ text: 'Sorry, something went wrong. Try again.', rate: 0.9 });
+    handleSpeak({ text: 'Sorry, something went wrong. Try again.', rate: 0.9 });
     return { success: false, error: err.message };
   }
 }
@@ -308,100 +309,35 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
-/** Cached preferred voice name */
-let preferredVoice = null;
-
-/** Ranked preference — warm, natural, calm voices */
-const PREFERRED_VOICES = [
-  'Google UK English Female',
-  'Google US English',
-  'Samantha',
-  'Karen',
-  'Moira',
-  'Tessa',
-  'Fiona',
-  'Victoria',
-  'Microsoft Zira',
-];
-
 /**
- * Find the best natural-sounding voice available.
- * @returns {Promise<string|null>}
- */
-function findBestVoice() {
-  return new Promise((resolve) => {
-    chrome.tts.getVoices((voices) => {
-      if (!voices || voices.length === 0) {
-        resolve(null);
-        return;
-      }
-
-      for (const name of PREFERRED_VOICES) {
-        const match = voices.find(v => v.voiceName === name);
-        if (match) {
-          preferredVoice = match.voiceName;
-          console.info('[AccessAgent] Selected voice:', preferredVoice);
-          resolve(preferredVoice);
-          return;
-        }
-      }
-
-      // Fallback: any English voice
-      const english = voices.find(v =>
-        v.lang?.startsWith('en') && !v.voiceName?.includes('Chrome')
-      );
-      if (english) {
-        preferredVoice = english.voiceName;
-        console.info('[AccessAgent] Fallback voice:', preferredVoice);
-      }
-      resolve(preferredVoice);
-    });
-  });
-}
-
-/**
- * Speak text using chrome.tts API with a calm, natural voice.
+ * Speak text. No async, no voice lookup, no complexity. Just speak.
  * @param {object} payload
  */
-async function handleSpeak(payload) {
-  const { text, rate = 0.9, pitch = 0.95, voiceName } = payload;
-
+function handleSpeak(payload) {
+  const text = payload?.text;
   if (!text) return;
 
-  // Find voice if we haven't yet (service worker may have restarted)
-  if (!preferredVoice && !voiceName) {
-    await findBestVoice();
+  console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
+
+  try {
+    chrome.tts.stop();
+  } catch (e) {
+    console.warn('[AccessAgent] tts.stop failed:', e);
   }
 
-  chrome.tts.stop();
-
-  const options = {
-    rate: Math.max(0.5, Math.min(2.0, rate)),
-    pitch: Math.max(0, Math.min(2.0, pitch)),
-    volume: 1.0,
-    enqueue: false,
-  };
-
-  const voice = voiceName || preferredVoice;
-  if (voice) {
-    options.voiceName = voice;
-  }
-
-  console.info('[AccessAgent] Speaking:', text.substring(0, 60), '| voice:', voice || 'default');
-  chrome.tts.speak(text, options, () => {
-    if (chrome.runtime.lastError) {
-      console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
-      // Retry without custom voice — fall back to system default
-      if (voice) {
-        console.info('[AccessAgent] Retrying with default voice');
-        chrome.tts.speak(text, { rate: options.rate, pitch: options.pitch, volume: 1.0 }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('[AccessAgent] TTS retry also failed:', chrome.runtime.lastError.message);
-          }
-        });
+  try {
+    chrome.tts.speak(text, {
+      rate: 0.9,
+      pitch: 1.0,
+      volume: 1.0,
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
       }
-    }
-  });
+    });
+  } catch (e) {
+    console.error('[AccessAgent] tts.speak threw:', e);
+  }
 }
 
 /**
