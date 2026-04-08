@@ -8,6 +8,7 @@ module.exports = {
     'background/service-worker': './src/background/service-worker.js',
     'ui/popup': './src/ui/popup.js',
     'ui/settings': './src/ui/settings.js',
+    'gesture/gesture-recognizer': './src/gesture/gesture-recognizer.js',
   },
 
   output: {
@@ -41,6 +42,7 @@ module.exports = {
         { from: 'src/ui/welcome.html', to: 'ui/welcome.html' },
         { from: 'src/ui/welcome.js', to: 'ui/welcome.js' },
         { from: 'src/content/content.css', to: 'content/content.css' },
+        { from: 'src/gesture/offscreen.html', to: 'gesture/offscreen.html' },
       ],
     }),
   ],

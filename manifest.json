@@ -9,7 +9,8 @@
     "storage",
     "tabs",
     "tts",
-    "contextMenus"
+    "contextMenus",
+    "offscreen"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -67,7 +68,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/sounds/*", "ui/welcome.html"],
+      "resources": ["assets/sounds/*", "ui/welcome.html", "gesture/*"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -12,6 +12,9 @@ import { processVoiceCommand } from './agent-logic.js';
 /** @type {Map<number, object>} Tab ID → repair report */
 const tabReports = new Map();
 
+/** Whether the gesture offscreen document is created */
+let gestureOffscreenCreated = false;
+
 /**
  * Extension install handler — set up defaults.
  */
@@ -151,6 +154,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tts.stop();
       sendResponse({ success: true });
       return false;
+
+    case 'GESTURE_COMMAND':
+      handleGestureCommand(message.payload)
+        .then(result => sendResponse(result))
+        .catch(err => sendResponse({ success: false, error: err.message }));
+      return true;
+
+    case 'GESTURE_ERROR':
+      handleSpeak({ text: message.payload?.error || 'Gesture control error.' });
+      sendResponse({ success: true });
+      return false;
+
+    case 'TOGGLE_GESTURES':
+      toggleGestureMode(message.payload?.enabled)
+        .then(result => sendResponse(result))
+        .catch(err => sendResponse({ success: false, error: err.message }));
+      return true;
 
     default:
       return false;
@@ -491,4 +511,87 @@ function updateBadge(tabId, count) {
   if (chrome.action.setBadgeTextColor) {
     chrome.action.setBadgeTextColor({ color: '#FFFFFF', tabId });
   }
+}
+
+// ─── Gesture Control ──────────────────────────────────────
+
+/**
+ * Create or ensure the gesture offscreen document exists.
+ */
+async function ensureGestureOffscreen() {
+  if (gestureOffscreenCreated) return;
+
+  try {
+    await chrome.offscreen.createDocument({
+      url: 'gesture/offscreen.html',
+      reasons: ['USER_MEDIA'],
+      justification: 'MediaPipe hand gesture recognition for accessibility navigation',
+    });
+    gestureOffscreenCreated = true;
+  } catch (err) {
+    if (err.message?.includes('Only a single offscreen')) {
+      gestureOffscreenCreated = true;
+    } else {
+      throw err;
+    }
+  }
+}
+
+/**
+ * Toggle gesture recognition on/off.
+ * @param {boolean} enabled
+ */
+async function toggleGestureMode(enabled) {
+  if (enabled) {
+    await ensureGestureOffscreen();
+    const response = await chrome.runtime.sendMessage({ type: 'GESTURE_START' });
+    if (response?.success) {
+      handleSpeak({ text: 'Gesture control on. I can see your hand.' });
+      await chrome.storage.local.set({ 'accessagent_gestures_enabled': true });
+    } else {
+      handleSpeak({ text: response?.error || 'Could not start gesture control.' });
+    }
+    return { success: true, enabled: true };
+  } else {
+    await chrome.runtime.sendMessage({ type: 'GESTURE_STOP' });
+    handleSpeak({ text: 'Gesture control off.' });
+    await chrome.storage.local.set({ 'accessagent_gestures_enabled': false });
+    return { success: true, enabled: false };
+  }
+}
+
+/**
+ * Handle a gesture command from the offscreen document.
+ * Routes gestures through the same pipeline as voice commands.
+ * @param {object} payload
+ */
+async function handleGestureCommand(payload) {
+  const { intent, label, gesture } = payload;
+  console.info(`[AccessAgent] Gesture: ${gesture} → ${label}`);
+
+  // Announce the gesture action
+  handleSpeak({ text: label });
+
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabId = activeTab?.id;
+  if (!tabId) return { success: false, error: 'No active tab' };
+
+  // Special case: toggle voice mode
+  if (intent === 'toggle_voice') {
+    try {
+      const result = await chrome.tabs.sendMessage(tabId, { type: 'toggle_voice' });
+      handleSpeak({ text: result?.message || 'Voice toggled.' });
+    } catch {
+      handleSpeak({ text: 'Could not toggle voice on this page.' });
+    }
+    return { success: true };
+  }
+
+  // Route through the voice command pipeline
+  const response = await processVoiceCommand(label, tabId);
+  if (response.confirmation && !response.silent) {
+    handleSpeak({ text: response.confirmation });
+  }
+
+  return { success: true, data: response };
 }
