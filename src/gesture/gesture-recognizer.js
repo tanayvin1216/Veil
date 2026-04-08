@@ -8,16 +8,16 @@
 import { GestureRecognizer, FilesetResolver } from '@mediapipe/tasks-vision';
 
 /** Minimum confidence to accept a gesture */
-const MIN_CONFIDENCE = 0.7;
+const MIN_CONFIDENCE = 0.6;
 
 /** How often to process frames (ms) */
-const FRAME_INTERVAL = 200;
+const FRAME_INTERVAL = 100;
 
 /** Debounce — same gesture must hold for N consecutive frames */
-const GESTURE_HOLD_FRAMES = 3;
+const GESTURE_HOLD_FRAMES = 2;
 
 /** Cooldown after a gesture is acted on (ms) */
-const GESTURE_COOLDOWN = 1500;
+const GESTURE_COOLDOWN = 800;
 
 /** Map MediaPipe gesture names to AccessAgent commands */
 const GESTURE_COMMANDS = {
