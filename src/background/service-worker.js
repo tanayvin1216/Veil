@@ -357,7 +357,7 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text. ElevenLabs (human British voice) → chrome.tts fallback.
+ * Speak text. ElevenLabs → chrome.tts fallback. Mutes mic during speech.
  */
 function handleSpeak(payload) {
   const text = typeof payload === 'string' ? payload : payload?.text;
@@ -367,28 +367,26 @@ function handleSpeak(payload) {
   // Stop any current speech
   try { chrome.tts.stop(); } catch (e) { /* ignore */ }
 
-  // Tell content script to mute mic while we speak
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs?.[0]?.id) {
-      chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted: true } }, () => {
-        if (chrome.runtime.lastError) { /* ignore */ }
-      });
-    }
-  });
+  // Mute mic
+  muteMic(true);
 
   // Try ElevenLabs, fall back to chrome.tts
   speakWithElevenLabs(text).catch((err) => {
     console.warn('[AccessAgent] ElevenLabs failed, using chrome.tts:', err.message);
-    chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 }, () => {
-      // Unmute mic when chrome.tts finishes
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs?.[0]?.id) {
-          chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted: false } }, () => {
-            if (chrome.runtime.lastError) { /* ignore */ }
-          });
-        }
+    chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
+    // Unmute after estimated speech duration (rough: 80ms per char)
+    setTimeout(() => muteMic(false), Math.max(text.length * 80, 2000));
+  });
+}
+
+/** Mute or unmute the content script's speech recognition */
+function muteMic(muted) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs?.[0]?.id) {
+      chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted } }, () => {
+        if (chrome.runtime.lastError) { /* ignore */ }
       });
-    });
+    }
   });
 }
 
