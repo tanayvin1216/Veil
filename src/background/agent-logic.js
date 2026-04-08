@@ -61,6 +61,11 @@ export function classifyIntentRuleBased(text) {
     return { intent: 'click', target, confidence: 0.9 };
   }
 
+  if (/^(take me to|bring me to|go to section|read the section|read section)\s+/i.test(text)) {
+    const target = text.replace(/^(take me to|bring me to|go to section|read the section|read section)\s+/i, '').trim();
+    return { intent: 'scroll_to_section', target, confidence: 0.95 };
+  }
+
   if (/^(go to|open|navigate to|visit)\s+/i.test(text)) {
     const target = text.replace(/^(go to|open|navigate to|visit)\s+/i, '').trim();
     if (target.includes('.') || target.includes('http')) {
@@ -172,23 +177,25 @@ async function handleWithLLM(transcript, tabId) {
 The user asks you something about the current webpage. You have access to the page's full structure: all links, headings, and content sections.
 
 Your job:
-1. If the user asks about a topic (e.g. "tell me about admissions"), find the most relevant link or section on the page and respond with an action.
-2. If the user asks a question that can be answered from the page content, answer it directly.
-3. If the user wants to go somewhere, find the right link.
+1. If the user says "take me to [section]" or asks about a section ON this page, scroll to that section and read it.
+2. If the user asks about a topic that has a LINK to another page, navigate to that link.
+3. If the user asks a question that can be answered from visible content, answer it directly.
 
 Respond with ONLY a JSON object:
 {
-  "action": "navigate" | "answer" | "not_found",
+  "action": "scroll_to_section" | "navigate" | "answer" | "not_found",
+  "section_query": "<heading text to scroll to, or null>",
   "url": "<full URL to navigate to, or null>",
   "answer": "<direct answer to speak to the user, or null>",
-  "link_text": "<text of the link you're clicking, for confirmation>"
+  "link_text": "<text of the link or section>"
 }
 
 Rules:
-- If navigating, include the full URL from the page structure. Do NOT make up URLs.
-- If answering, keep it under 3 sentences.
-- If you can't find anything relevant, set action to "not_found".
-- Be conversational and warm — you're helping a blind person.`;
+- Use "scroll_to_section" when the content is ON the current page (same-page section, heading, anchor).
+- Use "navigate" only when clicking a link to a DIFFERENT page. Include the full URL from the page structure.
+- Do NOT make up URLs. Only use URLs from the provided page structure.
+- If answering, keep it under 3 sentences. Be conversational and warm.
+- If the user says "take me there" or "go to that section", use scroll_to_section with the section name from context.`;
 
   const userMessage = `User said: "${transcript}"
 
@@ -256,8 +263,23 @@ async function parseLLMNavigationResponse(text, tabId) {
 
     const parsed = JSON.parse(jsonMatch[0]);
 
+    // Scroll to a section on the current page and read it
+    if (parsed.action === 'scroll_to_section' && parsed.section_query) {
+      const result = await sendMessageToTab(tabId, {
+        type: 'scroll_to_section',
+        payload: { query: parsed.section_query },
+      });
+      if (result?.success && result.data) {
+        return { confirmation: result.data, action: null };
+      }
+      return {
+        confirmation: `I couldn't find the section "${parsed.section_query}" on this page.`,
+        action: null,
+      };
+    }
+
+    // Navigate to a different page
     if (parsed.action === 'navigate' && parsed.url) {
-      // Navigate to the URL
       await chrome.tabs.update(tabId, { url: parsed.url });
       const linkDesc = parsed.link_text || 'that page';
       return {
@@ -266,15 +288,13 @@ async function parseLLMNavigationResponse(text, tabId) {
       };
     }
 
+    // Direct answer from page content
     if (parsed.action === 'answer' && parsed.answer) {
-      return {
-        confirmation: parsed.answer,
-        action: null,
-      };
+      return { confirmation: parsed.answer, action: null };
     }
 
     return {
-      confirmation: 'I couldn\'t find anything about that on this page. Try asking differently or say "help".',
+      confirmation: 'I couldn\'t find anything about that on this page. Try asking differently.',
       action: null,
     };
   } catch {
@@ -350,13 +370,20 @@ async function simpleTextMatch(query, structure, tabId) {
     }
   }
 
-  // Search headings and their content
+  // Search headings — scroll to the section and read content under it
   for (const heading of structure.headings || []) {
     const text = (heading.text + ' ' + (heading.content || '')).toLowerCase();
     if (keywords.some(k => text.includes(k))) {
-      const content = heading.content?.substring(0, 200) || '';
+      // Scroll to the section and read content underneath
+      const scrollResult = await sendMessageToTab(tabId, {
+        type: 'scroll_to_section',
+        payload: { query: heading.text },
+      });
+      if (scrollResult?.success && scrollResult.data) {
+        return { confirmation: scrollResult.data, action: null };
+      }
       return {
-        confirmation: `I found a section called "${heading.text}". ${content}`,
+        confirmation: `I found a section called "${heading.text}". ${heading.content?.substring(0, 200) || ''}`,
         action: null,
       };
     }
@@ -498,6 +525,20 @@ async function executeIntent(intent, tabId) {
       }
       await chrome.tabs.update(tabId, { url });
       return { confirmation: `Navigating to ${intent.target}.`, action: { action: 'navigate', url } };
+    }
+
+    case 'scroll_to_section': {
+      const scrollResult = await sendMessageToTab(tabId, {
+        type: 'scroll_to_section',
+        payload: { query: intent.target },
+      });
+      if (scrollResult?.success && scrollResult.data) {
+        return { confirmation: scrollResult.data, action: null };
+      }
+      return {
+        confirmation: `I couldn't find a section called "${intent.target}" on this page.`,
+        action: null,
+      };
     }
 
     case 'page_summary': {

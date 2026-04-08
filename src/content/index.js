@@ -178,6 +178,12 @@ function setupMessageListener() {
         return true;
       }
 
+      case 'scroll_to_section': {
+        const result = scrollToSectionAndRead(message.payload.query);
+        sendResponse(result);
+        return true;
+      }
+
       case 'fuzzy_match':
         sendResponse({
           success: true,
@@ -403,6 +409,108 @@ function handleToggleVoice() {
  */
 function buildPageSummaryText() {
   return analyzePage(document);
+}
+
+// ─── Section Navigation ────────────────────────────────────
+
+/**
+ * Find a section by query, scroll to it, and return the content underneath.
+ * @param {string} query - What the user said (heading text or keywords)
+ * @returns {{success: boolean, data: string|null}}
+ */
+function scrollToSectionAndRead(query) {
+  const queryLower = query.toLowerCase().trim();
+  const allHeadings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const heading of allHeadings) {
+    const text = heading.textContent?.trim() || '';
+    if (!text) continue;
+
+    const textLower = text.toLowerCase();
+
+    // Exact match
+    if (textLower === queryLower) {
+      bestMatch = heading;
+      bestScore = 100;
+      break;
+    }
+
+    // Query is contained in heading or heading in query
+    if (textLower.includes(queryLower) || queryLower.includes(textLower)) {
+      const score = 80;
+      if (score > bestScore) {
+        bestMatch = heading;
+        bestScore = score;
+      }
+      continue;
+    }
+
+    // Keyword matching
+    const keywords = queryLower.split(/\s+/).filter(w => w.length > 2);
+    const matchCount = keywords.filter(k => textLower.includes(k)).length;
+    if (matchCount > 0) {
+      const score = (matchCount / keywords.length) * 60;
+      if (score > bestScore) {
+        bestMatch = heading;
+        bestScore = score;
+      }
+    }
+  }
+
+  if (!bestMatch || bestScore < 20) {
+    return { success: false, data: null };
+  }
+
+  // Scroll to it
+  bestMatch.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  bestMatch.focus();
+
+  // Read the content underneath this heading
+  const content = readContentUnderHeading(bestMatch);
+  const headingText = bestMatch.textContent.trim();
+
+  return {
+    success: true,
+    data: `${headingText}. ${content}`,
+  };
+}
+
+/**
+ * Read all text content between a heading and the next same-or-higher-level heading.
+ * @param {HTMLElement} heading
+ * @returns {string}
+ */
+function readContentUnderHeading(heading) {
+  const headingLevel = parseInt(heading.tagName.charAt(1), 10);
+  const parts = [];
+  let charCount = 0;
+  let node = heading.nextElementSibling;
+
+  while (node && charCount < 1000) {
+    // Stop at the next heading of same or higher level
+    if (/^H[1-6]$/i.test(node.tagName)) {
+      const nextLevel = parseInt(node.tagName.charAt(1), 10);
+      if (nextLevel <= headingLevel) break;
+      // Include subheading text
+      parts.push(node.textContent.trim() + '.');
+      charCount += node.textContent.length;
+      node = node.nextElementSibling;
+      continue;
+    }
+
+    const text = node.textContent?.trim();
+    if (text && text.length > 5) {
+      parts.push(text);
+      charCount += text.length;
+    }
+
+    node = node.nextElementSibling;
+  }
+
+  return parts.join(' ').substring(0, 1000) || 'No additional content found under this section.';
 }
 
 // ─── Bootstrap ─────────────────────────────────────────────
