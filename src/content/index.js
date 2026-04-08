@@ -55,6 +55,9 @@ async function initialize() {
     // Auto-activate voice mode for fully hands-free experience
     autoActivateVoice();
 
+    // If we arrived here via voice navigation, announce the page
+    announceIfNavigated();
+
     info(CONTEXT, 'Initialization complete');
   } catch (err) {
     logError(CONTEXT, 'Initialization failed:', err.message);
@@ -376,6 +379,33 @@ function announcePageOnLoad() {
       );
     }
   }, 3000);
+}
+
+/**
+ * If the user navigated here via a voice command, announce the page.
+ * The service worker sets a flag before navigating.
+ */
+function announceIfNavigated() {
+  if (window.location.protocol === 'chrome-extension:') return;
+
+  chrome.storage.local.get('accessagent_pending_announce', (result) => {
+    if (chrome.runtime.lastError) return;
+    if (!result['accessagent_pending_announce']) return;
+
+    // Clear the flag
+    chrome.storage.local.remove('accessagent_pending_announce');
+
+    // Wait for page to settle, then announce
+    setTimeout(() => {
+      const summary = buildPageSummaryText();
+      if (summary) {
+        chrome.runtime.sendMessage(
+          { type: MESSAGE_TYPES.SPEAK, payload: { text: summary } },
+          () => { if (chrome.runtime.lastError) { /* ignore */ } }
+        );
+      }
+    }, 2000);
+  });
 }
 
 // ─── Auto Voice Activation ─────────────────────────────────

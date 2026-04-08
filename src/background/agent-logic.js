@@ -10,6 +10,16 @@ import { parseIntent } from './api-client.js';
 /** @type {ConversationEntry[]} */
 let conversationHistory = [];
 
+/**
+ * Navigate to a URL and set flag so content script announces the page.
+ * @param {number} tabId
+ * @param {string} url
+ */
+async function navigateAndAnnounce(tabId, url) {
+  await chrome.storage.local.set({ 'accessagent_pending_announce': true });
+  await navigateAndAnnounce(tabId, url);
+}
+
 
 /**
  * Process a voice command from the user.
@@ -280,7 +290,7 @@ async function parseLLMNavigationResponse(text, tabId) {
 
     // Navigate to a different page
     if (parsed.action === 'navigate' && parsed.url) {
-      await chrome.tabs.update(tabId, { url: parsed.url });
+      await navigateAndAnnounce(tabId, parsed.url);
       const linkDesc = parsed.link_text || 'that page';
       return {
         confirmation: `Navigating to ${linkDesc}. I'll tell you what's on the page when it loads.`,
@@ -350,7 +360,7 @@ async function simpleTextMatch(query, structure, tabId) {
   for (const item of structure.navItems || []) {
     const navText = item.text.toLowerCase();
     if (keywords.some(k => navText.includes(k))) {
-      await chrome.tabs.update(tabId, { url: item.href });
+      await navigateAndAnnounce(tabId, item.href);
       return {
         confirmation: `Found "${item.text}" in the navigation. Taking you there now. I'll tell you what's on the page when it loads.`,
         action: { action: 'navigate', url: item.href },
@@ -362,7 +372,7 @@ async function simpleTextMatch(query, structure, tabId) {
   for (const link of structure.links || []) {
     const linkText = (link.text + ' ' + (link.context || '')).toLowerCase();
     if (keywords.some(k => linkText.includes(k))) {
-      await chrome.tabs.update(tabId, { url: link.href });
+      await navigateAndAnnounce(tabId, link.href);
       return {
         confirmation: `Found "${link.text}". Taking you there now. I'll tell you what's on the page when it loads.`,
         action: { action: 'navigate', url: link.href },
@@ -524,7 +534,7 @@ async function executeIntent(intent, tabId) {
       } catch {
         return { confirmation: `"${intent.target}" doesn't look like a valid web address.`, action: null };
       }
-      await chrome.tabs.update(tabId, { url });
+      await navigateAndAnnounce(tabId, url);
       return { confirmation: `Navigating to ${intent.target}. I'll tell you what's on the page when it loads.`, action: { action: 'navigate', url } };
     }
 
@@ -558,7 +568,7 @@ async function executeIntent(intent, tabId) {
       for (const item of structure.navItems || []) {
         const navText = item.text.toLowerCase();
         if (navText === query || allKeywords.every(k => navText.includes(k))) {
-          await chrome.tabs.update(tabId, { url: item.href });
+          await navigateAndAnnounce(tabId, item.href);
           return {
             confirmation: `Taking you to ${item.text}. I'll describe the page when it loads.`,
             action: { action: 'navigate', url: item.href },
@@ -570,7 +580,7 @@ async function executeIntent(intent, tabId) {
       for (const item of structure.navItems || []) {
         const navText = item.text.toLowerCase();
         if (allKeywords.some(k => navText.includes(k))) {
-          await chrome.tabs.update(tabId, { url: item.href });
+          await navigateAndAnnounce(tabId, item.href);
           return {
             confirmation: `Found ${item.text} in navigation. Taking you there now.`,
             action: { action: 'navigate', url: item.href },
@@ -582,7 +592,7 @@ async function executeIntent(intent, tabId) {
       for (const link of structure.links || []) {
         const linkText = link.text.toLowerCase();
         if (linkText === query || allKeywords.every(k => linkText.includes(k))) {
-          await chrome.tabs.update(tabId, { url: link.href });
+          await navigateAndAnnounce(tabId, link.href);
           return {
             confirmation: `Found a link to ${link.text}. Taking you there.`,
             action: { action: 'navigate', url: link.href },
@@ -603,7 +613,7 @@ async function executeIntent(intent, tabId) {
       for (const link of structure.links || []) {
         const linkText = (link.text + ' ' + (link.context || '')).toLowerCase();
         if (allKeywords.some(k => linkText.includes(k))) {
-          await chrome.tabs.update(tabId, { url: link.href });
+          await navigateAndAnnounce(tabId, link.href);
           return {
             confirmation: `Found ${link.text}. Taking you there.`,
             action: { action: 'navigate', url: link.href },
