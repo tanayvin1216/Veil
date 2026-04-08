@@ -1,163 +1,191 @@
 /**
- * Popup script — displays repair stats and controls.
- * @module popup
+ * Popup script — voice-first interface for blind and low-vision users.
+ * Big buttons, speech controls, high contrast.
  */
 
-const MESSAGE_TYPES = {
-  GET_REPAIR_REPORT: 'get_repair_report',
-  TOGGLE_EXTENSION: 'toggle_extension',
+const MSG = {
+  GET_PAGE_SUMMARY: 'get_page_summary',
+  WHAT_AM_I_MISSING: 'what_am_i_missing',
+  TOGGLE_VOICE: 'toggle_voice',
+  SPEAK: 'speak',
+  STOP_SPEAKING: 'stop_speaking',
 };
 
-const STORAGE_KEYS = {
-  ENABLED: 'accessagent_enabled',
-};
+let lastSummary = '';
+let currentSpeed = 0.9;
+let isPaused = false;
+let voiceActive = false;
 
-/** DOM element references */
-const elements = {
-  toggleBtn: null,
-  statusDot: null,
-  statusText: null,
-  countImages: null,
-  countButtons: null,
-  countForms: null,
-  countHeadings: null,
-  countLandmarks: null,
-  countFocus: null,
-  totalRepairs: null,
-  repairTime: null,
-  settingsLink: null,
-  popup: null,
-};
+const el = {};
 
-/**
- * Initialize the popup.
- */
-async function init() {
-  bindElements();
-  setupListeners();
-  await loadState();
-  await loadRepairReport();
-}
+function init() {
+  el.status = document.getElementById('status');
+  el.btnSummary = document.getElementById('btn-summary');
+  el.btnMissing = document.getElementById('btn-missing');
+  el.btnVoice = document.getElementById('btn-voice');
+  el.btnPause = document.getElementById('btn-pause');
+  el.btnStop = document.getElementById('btn-stop');
+  el.btnRepeat = document.getElementById('btn-repeat');
+  el.btnSlower = document.getElementById('btn-slower');
+  el.btnFaster = document.getElementById('btn-faster');
+  el.speedDisplay = document.getElementById('speed-display');
+  el.summaryText = document.getElementById('summary-text');
+  el.settingsLink = document.getElementById('settings-link');
 
-/**
- * Bind DOM element references.
- */
-function bindElements() {
-  elements.toggleBtn = document.getElementById('toggle-btn');
-  elements.statusDot = document.getElementById('status-indicator');
-  elements.statusText = document.getElementById('status-text');
-  elements.countImages = document.getElementById('count-images');
-  elements.countButtons = document.getElementById('count-buttons');
-  elements.countForms = document.getElementById('count-forms');
-  elements.countHeadings = document.getElementById('count-headings');
-  elements.countLandmarks = document.getElementById('count-landmarks');
-  elements.countFocus = document.getElementById('count-focus');
-  elements.totalRepairs = document.getElementById('total-repairs');
-  elements.repairTime = document.getElementById('repair-time');
-  elements.settingsLink = document.getElementById('settings-link');
-  elements.popup = document.querySelector('.popup');
-}
-
-/**
- * Set up event listeners.
- */
-function setupListeners() {
-  elements.toggleBtn.addEventListener('click', handleToggle);
-
-  elements.settingsLink.addEventListener('click', (e) => {
+  el.btnSummary.addEventListener('click', handleSummary);
+  el.btnMissing.addEventListener('click', handleMissing);
+  el.btnVoice.addEventListener('click', handleVoiceToggle);
+  el.btnPause.addEventListener('click', handlePause);
+  el.btnStop.addEventListener('click', handleStop);
+  el.btnRepeat.addEventListener('click', handleRepeat);
+  el.btnSlower.addEventListener('click', () => adjustSpeed(-0.1));
+  el.btnFaster.addEventListener('click', () => adjustSpeed(0.1));
+  el.settingsLink.addEventListener('click', (e) => {
     e.preventDefault();
     chrome.runtime.openOptionsPage();
   });
 }
 
-/**
- * Handle toggle button click.
- */
-async function handleToggle() {
-  const isCurrentlyEnabled = elements.toggleBtn.getAttribute('aria-pressed') === 'true';
-  const newState = !isCurrentlyEnabled;
+async function handleSummary() {
+  setStatus('Reading page...', 'speaking');
 
-  elements.toggleBtn.setAttribute('aria-pressed', String(newState));
-  updateStatusDisplay(newState);
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
 
-  chrome.runtime.sendMessage({
-    type: MESSAGE_TYPES.TOGGLE_EXTENSION,
-    payload: { enabled: newState },
+    const response = await chrome.tabs.sendMessage(tab.id, { type: MSG.GET_PAGE_SUMMARY });
+
+    if (response?.data) {
+      lastSummary = response.data;
+      showSummary(lastSummary);
+      speakText(lastSummary);
+    } else {
+      setStatus('Could not read this page', '');
+    }
+  } catch {
+    setStatus('Not available on this page', '');
+  }
+}
+
+async function handleMissing() {
+  setStatus('Checking accessibility...', 'speaking');
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+
+    const response = await chrome.tabs.sendMessage(tab.id, { type: MSG.WHAT_AM_I_MISSING });
+
+    if (response?.data) {
+      lastSummary = response.data;
+      showSummary(lastSummary);
+      speakText(lastSummary);
+    }
+  } catch {
+    setStatus('Not available on this page', '');
+  }
+}
+
+async function handleVoiceToggle() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+
+    const response = await chrome.tabs.sendMessage(tab.id, { type: MSG.TOGGLE_VOICE });
+
+    voiceActive = !voiceActive;
+    el.btnVoice.textContent = voiceActive ? 'Stop Voice Mode' : 'Start Voice Mode';
+    el.btnVoice.classList.toggle('active', voiceActive);
+
+    if (response?.message) {
+      speakText(response.message);
+    }
+
+    setStatus(voiceActive ? 'Listening...' : 'Ready', voiceActive ? 'listening' : '');
+  } catch {
+    setStatus('Voice not available on this page', '');
+  }
+}
+
+function handlePause() {
+  if (isPaused) {
+    chrome.tts.resume();
+    el.btnPause.textContent = 'Pause';
+    setStatus('Reading...', 'speaking');
+  } else {
+    chrome.tts.pause();
+    el.btnPause.textContent = 'Resume';
+    setStatus('Paused', '');
+  }
+  isPaused = !isPaused;
+}
+
+function handleStop() {
+  chrome.tts.stop();
+  isPaused = false;
+  el.btnPause.textContent = 'Pause';
+  enablePlaybackControls(false);
+  setStatus('Ready', '');
+}
+
+function handleRepeat() {
+  if (lastSummary) {
+    speakText(lastSummary);
+  }
+}
+
+function adjustSpeed(delta) {
+  currentSpeed = Math.max(0.5, Math.min(2.0, currentSpeed + delta));
+  currentSpeed = Math.round(currentSpeed * 10) / 10;
+  el.speedDisplay.textContent = `Speed: ${currentSpeed}x`;
+
+  // If currently speaking, restart with new speed
+  if (lastSummary) {
+    chrome.tts.stop();
+    speakText(lastSummary);
+  }
+}
+
+function speakText(text) {
+  chrome.tts.stop();
+  isPaused = false;
+  el.btnPause.textContent = 'Pause';
+
+  chrome.tts.speak(text, {
+    rate: currentSpeed,
+    pitch: 0.95,
+    volume: 1.0,
+    onEvent: (event) => {
+      if (event.type === 'start') {
+        setStatus('Reading...', 'speaking');
+        enablePlaybackControls(true);
+      }
+      if (event.type === 'end' || event.type === 'cancelled') {
+        setStatus('Ready', '');
+        enablePlaybackControls(false);
+      }
+      if (event.type === 'error') {
+        setStatus('Speech error', '');
+        enablePlaybackControls(false);
+      }
+    },
   });
 }
 
-/**
- * Load the current enabled state.
- */
-async function loadState() {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.ENABLED);
-  const isEnabled = result[STORAGE_KEYS.ENABLED] !== false;
-
-  elements.toggleBtn.setAttribute('aria-pressed', String(isEnabled));
-  updateStatusDisplay(isEnabled);
+function showSummary(text) {
+  el.summaryText.textContent = text;
+  el.summaryText.classList.add('visible');
 }
 
-/**
- * Update the status indicator display.
- * @param {boolean} isEnabled
- */
-function updateStatusDisplay(isEnabled) {
-  if (isEnabled) {
-    elements.statusDot.className = 'status-dot status-dot--active';
-    elements.statusText.textContent = 'Active on this page';
-    elements.popup.classList.remove('popup--disabled');
-  } else {
-    elements.statusDot.className = 'status-dot status-dot--disabled';
-    elements.statusText.textContent = 'Disabled';
-    elements.popup.classList.add('popup--disabled');
-  }
+function setStatus(text, className) {
+  el.status.textContent = text;
+  el.status.className = 'status' + (className ? ' ' + className : '');
 }
 
-/**
- * Load and display the repair report for the active tab.
- */
-async function loadRepairReport() {
-  try {
-    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!activeTab?.id) return;
-
-    const response = await chrome.tabs.sendMessage(activeTab.id, {
-      type: MESSAGE_TYPES.GET_REPAIR_REPORT,
-    });
-
-    if (response?.success && response.data?.tier1) {
-      displayReport(response.data.tier1);
-    }
-  } catch {
-    // Content script may not be loaded on this page (e.g., chrome:// pages)
-    displayNoData();
-  }
-}
-
-/**
- * Display repair report data.
- * @param {object} report
- */
-function displayReport(report) {
-  elements.countImages.textContent = report.images || 0;
-  elements.countButtons.textContent = report.buttons || 0;
-  elements.countForms.textContent = report.formLabels || 0;
-  elements.countHeadings.textContent = report.headings || 0;
-  elements.countLandmarks.textContent = report.landmarks || 0;
-  elements.countFocus.textContent = report.focusTraps || 0;
-  elements.totalRepairs.textContent = report.totalRepairs || 0;
-
-  if (report.executionMs !== undefined) {
-    elements.repairTime.textContent = `in ${report.executionMs}ms`;
-  }
-}
-
-/**
- * Display placeholder when no data is available.
- */
-function displayNoData() {
-  elements.statusText.textContent = 'Not available on this page';
-  elements.statusDot.className = 'status-dot status-dot--disabled';
+function enablePlaybackControls(enabled) {
+  el.btnPause.disabled = !enabled;
+  el.btnStop.disabled = !enabled;
+  el.btnRepeat.disabled = !lastSummary;
 }
 
 document.addEventListener('DOMContentLoaded', init);

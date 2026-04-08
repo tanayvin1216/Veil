@@ -7,89 +7,49 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="popup" role="main" aria-label="AccessAgent status panel">
+  <div class="popup" role="main" aria-label="AccessAgent controls">
 
-    <header class="popup-header">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true">A</span>
-        <div class="brand-text">
-          <h1 class="brand-name">AccessAgent</h1>
-          <p class="brand-tagline">Personal Accessibility Agent</p>
-        </div>
-      </div>
-      <button
-        id="toggle-btn"
-        class="toggle"
-        aria-label="Toggle AccessAgent on or off"
-        aria-pressed="true"
-      >
-        <span class="toggle-track">
-          <span class="toggle-thumb"></span>
-        </span>
-      </button>
+    <header class="header">
+      <h1 class="title">AccessAgent</h1>
+      <div id="status" class="status" aria-live="polite">Ready</div>
     </header>
 
-    <section class="status" aria-live="polite">
-      <div id="status-indicator" class="status-dot status-dot--active" aria-hidden="true"></div>
-      <span id="status-text" class="status-label">Active on this page</span>
-    </section>
+    <div class="actions">
+      <button id="btn-summary" class="btn btn-primary" aria-label="Read page summary">
+        Read Page Summary
+      </button>
 
-    <section class="repairs" aria-label="Repair summary">
-      <h2 class="section-title">Repairs on this page</h2>
-      <dl class="repair-grid" id="repair-list">
-        <div class="repair-item">
-          <dt class="repair-label">Images fixed</dt>
-          <dd class="repair-count" id="count-images">—</dd>
-        </div>
-        <div class="repair-item">
-          <dt class="repair-label">Buttons labeled</dt>
-          <dd class="repair-count" id="count-buttons">—</dd>
-        </div>
-        <div class="repair-item">
-          <dt class="repair-label">Form labels</dt>
-          <dd class="repair-count" id="count-forms">—</dd>
-        </div>
-        <div class="repair-item">
-          <dt class="repair-label">Headings fixed</dt>
-          <dd class="repair-count" id="count-headings">—</dd>
-        </div>
-        <div class="repair-item">
-          <dt class="repair-label">Landmarks added</dt>
-          <dd class="repair-count" id="count-landmarks">—</dd>
-        </div>
-        <div class="repair-item">
-          <dt class="repair-label">Focus traps</dt>
-          <dd class="repair-count" id="count-focus">—</dd>
-        </div>
-      </dl>
-      <p class="repair-total">
-        <strong id="total-repairs">0</strong> total repairs
-        <span class="repair-time" id="repair-time"></span>
-      </p>
-    </section>
+      <button id="btn-missing" class="btn btn-secondary" aria-label="What am I missing report">
+        What Am I Missing?
+      </button>
 
-    <section class="shortcuts" aria-label="Keyboard shortcuts">
-      <h2 class="section-title">Shortcuts</h2>
-      <ul class="shortcut-list">
-        <li>
-          <kbd>Alt+Shift+A</kbd>
-          <span>Voice agent</span>
-        </li>
-        <li>
-          <kbd>Alt+Shift+P</kbd>
-          <span>Page summary</span>
-        </li>
-        <li>
-          <kbd>Alt+Shift+M</kbd>
-          <span>What am I missing?</span>
-        </li>
-      </ul>
-    </section>
+      <button id="btn-voice" class="btn btn-voice" aria-label="Start voice commands">
+        Start Voice Mode
+      </button>
+    </div>
 
-    <footer class="popup-footer">
-      <a href="#" id="settings-link" class="footer-link">Settings</a>
-      <span class="footer-divider" aria-hidden="true">·</span>
-      <span class="footer-version">v1.0.0</span>
+    <div class="controls">
+      <button id="btn-pause" class="btn-small" aria-label="Pause or resume speech" disabled>
+        Pause
+      </button>
+      <button id="btn-stop" class="btn-small" aria-label="Stop speech" disabled>
+        Stop
+      </button>
+      <button id="btn-repeat" class="btn-small" aria-label="Repeat last summary" disabled>
+        Repeat
+      </button>
+    </div>
+
+    <div class="speed-controls">
+      <button id="btn-slower" class="btn-small" aria-label="Slower speech">Slower</button>
+      <span id="speed-display" class="speed-label" aria-live="polite">Speed: 0.9x</span>
+      <button id="btn-faster" class="btn-small" aria-label="Faster speech">Faster</button>
+    </div>
+
+    <div id="summary-text" class="summary-text" aria-live="polite" role="region" aria-label="Page summary text"></div>
+
+    <footer class="footer">
+      <a href="#" id="settings-link" class="footer-link" aria-label="Open settings">Settings</a>
     </footer>
 
   </div>

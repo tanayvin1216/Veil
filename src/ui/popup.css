@@ -1,16 +1,7 @@
 /*
- * AccessAgent Popup — Utilitarian, high-contrast, information-dense.
- * Aesthetic: Industrial/Utilitarian — no decoration, pure function.
- * Reference: Linear's sidebar density, Raycast's command palette economy.
- *
- * Design tokens:
- *   Primary: #1A1A1A (ink)
- *   Accent:  #2D5A27 (forest — suggests growth/repair)
- *   Surface: #FAFAF8 (warm off-white)
- *   Border:  #D4D4D0 (stone)
- *   Muted:   #8A8A85 (ash)
- *   Type:    "IBM Plex Mono" / system monospace
- *   Scale:   4px base unit
+ * AccessAgent Popup — High contrast, large text, voice-first.
+ * Designed for blind and low-vision users.
+ * Dark background, white text, large touch targets.
  */
 
 * {
@@ -20,260 +11,196 @@
 }
 
 body {
-  width: 340px;
-  font-family: 'IBM Plex Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
-  font-size: 12px;
+  width: 360px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 16px;
   line-height: 1.5;
-  color: #1A1A1A;
-  background: #FAFAF8;
+  color: #F0F0F0;
+  background: #111111;
   -webkit-font-smoothing: antialiased;
 }
 
 .popup {
-  padding: 16px;
+  padding: 20px;
 }
 
 /* ─── Header ─────────────────────────────────────────── */
 
-.popup-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #1A1A1A;
+.header {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #333;
+  margin-bottom: 16px;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.brand-mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: #1A1A1A;
-  color: #FAFAF8;
-  font-size: 14px;
+.title {
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
 }
-
-.brand-name {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-}
-
-.brand-tagline {
-  font-size: 10px;
-  color: #8A8A85;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-
-/* ─── Toggle ─────────────────────────────────────────── */
-
-.toggle {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-}
-
-.toggle-track {
-  display: block;
-  width: 36px;
-  height: 20px;
-  background: #D4D4D0;
-  border-radius: 2px;
-  position: relative;
-  transition: background 150ms ease;
-}
-
-.toggle[aria-pressed="true"] .toggle-track {
-  background: #2D5A27;
-}
-
-.toggle-thumb {
-  display: block;
-  width: 16px;
-  height: 16px;
-  background: #FAFAF8;
-  border-radius: 1px;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform 150ms ease;
-}
-
-.toggle[aria-pressed="true"] .toggle-thumb {
-  transform: translateX(16px);
-}
-
-.toggle:focus-visible {
-  outline: 2px solid #2D5A27;
-  outline-offset: 2px;
-}
-
-/* ─── Status ─────────────────────────────────────────── */
 
 .status {
+  font-size: 14px;
+  color: #8BC34A;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.status.listening {
+  color: #FF9800;
+}
+
+.status.speaking {
+  color: #42A5F5;
+}
+
+/* ─── Main Buttons ───────────────────────────────────── */
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 16px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btn-primary {
+  background: #FFFFFF;
+  color: #111111;
+  border-color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  background: #E0E0E0;
+}
+
+.btn-secondary {
+  background: #333333;
+  color: #FFFFFF;
+  border-color: #555555;
+}
+
+.btn-secondary:hover {
+  background: #444444;
+}
+
+.btn-voice {
+  background: #1B5E20;
+  color: #FFFFFF;
+  border-color: #2E7D32;
+}
+
+.btn-voice:hover {
+  background: #2E7D32;
+}
+
+.btn-voice.active {
+  background: #B71C1C;
+  border-color: #D32F2F;
+}
+
+.btn-voice.active::after {
+  content: ' (listening)';
+}
+
+/* ─── Playback Controls ──────────────────────────────── */
+
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.btn-small {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px;
+  background: #222222;
+  color: #CCCCCC;
+  border: 1px solid #444444;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-small:hover:not(:disabled) {
+  background: #333333;
+  color: #FFFFFF;
+}
+
+.btn-small:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ─── Speed Controls ─────────────────────────────────── */
+
+.speed-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 0;
+  margin-bottom: 16px;
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #D4D4D0;
-  flex-shrink: 0;
+.speed-controls .btn-small {
+  flex: 0 0 auto;
+  padding: 8px 14px;
 }
 
-.status-dot--active {
-  background: #2D5A27;
-}
-
-.status-dot--disabled {
-  background: #8A8A85;
-}
-
-.status-label {
-  font-size: 11px;
-  color: #8A8A85;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-/* ─── Repairs ────────────────────────────────────────── */
-
-.section-title {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #8A8A85;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #E8E8E4;
-  margin-bottom: 8px;
-}
-
-.repair-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-}
-
-.repair-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding: 4px 0;
-  border-bottom: 1px solid #F0F0EC;
-}
-
-.repair-item:nth-child(odd) {
-  padding-right: 12px;
-  border-right: 1px solid #F0F0EC;
-}
-
-.repair-item:nth-child(even) {
-  padding-left: 12px;
-}
-
-.repair-label {
-  font-size: 11px;
-  color: #5A5A55;
-  font-weight: 400;
-}
-
-.repair-count {
+.speed-label {
+  flex: 1;
+  text-align: center;
   font-size: 13px;
-  font-weight: 600;
-  color: #1A1A1A;
-  font-variant-numeric: tabular-nums;
+  color: #999999;
 }
 
-.repair-total {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #1A1A1A;
-  font-size: 12px;
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
+/* ─── Summary Text ───────────────────────────────────── */
+
+.summary-text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #DDDDDD;
+  padding: 12px;
+  background: #1A1A1A;
+  border: 1px solid #333333;
+  border-radius: 4px;
+  min-height: 24px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: none;
 }
 
-.repair-total strong {
-  font-size: 18px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.repair-time {
-  color: #8A8A85;
-  font-size: 10px;
-  margin-left: auto;
-}
-
-/* ─── Shortcuts ──────────────────────────────────────── */
-
-.shortcuts {
-  margin-top: 16px;
-}
-
-.shortcut-list {
-  list-style: none;
-}
-
-.shortcut-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
-  font-size: 11px;
-  color: #5A5A55;
-}
-
-.shortcut-list li + li {
-  border-top: 1px solid #F0F0EC;
-}
-
-kbd {
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 500;
-  color: #1A1A1A;
-  background: #EDEDEA;
-  padding: 2px 6px;
-  border: 1px solid #D4D4D0;
-  border-radius: 2px;
-  letter-spacing: 0.01em;
+.summary-text.visible {
+  display: block;
 }
 
 /* ─── Footer ─────────────────────────────────────────── */
 
-.popup-footer {
+.footer {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #E8E8E4;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
+  border-top: 1px solid #333333;
+  text-align: center;
 }
 
 .footer-link {
-  color: #2D5A27;
+  color: #8BC34A;
   text-decoration: none;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -281,64 +208,13 @@ kbd {
   text-decoration: underline;
 }
 
-.footer-link:focus-visible {
-  outline: 2px solid #2D5A27;
-  outline-offset: 2px;
-}
-
-.footer-divider {
-  color: #D4D4D0;
-}
-
-.footer-version {
-  color: #8A8A85;
-}
-
-/* ─── Disabled state ─────────────────────────────────── */
-
-.popup--disabled .repairs,
-.popup--disabled .shortcuts {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-/* ─── Focus styles ───────────────────────────────────── */
+/* ─── Focus ──────────────────────────────────────────── */
 
 :focus-visible {
-  outline: 2px solid #2D5A27;
+  outline: 3px solid #42A5F5;
   outline-offset: 2px;
 }
 
-/* ─── High contrast mode ─────────────────────────────── */
-
-@media (prefers-contrast: high) {
-  body {
-    background: #fff;
-    color: #000;
-  }
-
-  .repair-label,
-  .status-label,
-  .section-title {
-    color: #000;
-  }
-
-  .popup-header,
-  .repair-total {
-    border-color: #000;
-  }
-
-  kbd {
-    border-color: #000;
-    background: #eee;
-  }
-}
-
-/* ─── Reduced motion ─────────────────────────────────── */
-
 @media (prefers-reduced-motion: reduce) {
-  .toggle-track,
-  .toggle-thumb {
-    transition: none;
-  }
+  * { transition: none !important; }
 }

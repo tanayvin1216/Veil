@@ -10,6 +10,7 @@ import { LOG_LEVELS } from '../utils/constants.js';
 import { runTier1Repairs } from './tier1-repair.js';
 import { runTier2Repairs } from './tier2-smart.js';
 import { runTier3Analysis, buildMissingSummary } from './tier3-vision.js';
+import { analyzePage } from './page-analyzer.js';
 import { buildElementRegistry, fuzzyMatch, getDOMElement } from './dom-labeler.js';
 import { startObserving } from './mutation-observer.js';
 import { getRepairCounts, announce } from './aria-injector.js';
@@ -385,47 +386,11 @@ function handleToggleVoice() {
 }
 
 /**
- * Build a short page summary — 2-3 sentences max.
- * Just enough for a blind user to know where they are and what this page is about.
+ * Build a conversational page summary using the page analyzer.
  * @returns {string}
  */
 function buildPageSummaryText() {
-  const title = document.title || 'Unknown page';
-
-  // Best single-line description of the page
-  const metaDesc = document.querySelector('meta[name="description"]')?.content?.trim();
-
-  // Main heading if different from title
-  const h1 = document.querySelector('h1')?.textContent?.trim() || '';
-  const heading = (h1 && h1 !== title) ? h1 : '';
-
-  // Section topics from subheadings — just the first few words
-  const sections = Array.from(document.querySelectorAll('h2'))
-    .slice(0, 5)
-    .map(h => h.textContent?.trim())
-    .filter(t => t && t.length < 80);
-
-  // Build it — short and direct
-  let summary = title + '. ';
-
-  if (metaDesc) {
-    summary += metaDesc;
-  } else if (heading) {
-    summary += heading + '.';
-  } else {
-    // Grab the first real paragraph as fallback
-    const firstP = document.querySelector('main p, article p, #content p, p');
-    const pText = firstP?.textContent?.trim() || '';
-    if (pText.length > 20) {
-      summary += pText.substring(0, 150) + '.';
-    }
-  }
-
-  if (sections.length > 0) {
-    summary += ' Sections: ' + sections.join(', ') + '.';
-  }
-
-  return summary;
+  return analyzePage(document);
 }
 
 // ─── Bootstrap ─────────────────────────────────────────────
