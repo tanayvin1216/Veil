@@ -6,6 +6,24 @@
  * @module intent-classifier
  */
 
+/** Hoisted to module scope — avoids re-creating on every call */
+const INTENT_PATTERNS = [
+  { regex: /^(click|press|tap|select|activate)\s+(.+)$/i, intent: 'click', targetGroup: 2 },
+  { regex: /^(go to|open|navigate to|visit)\s+(.+)$/i, intent: 'navigate', targetGroup: 2 },
+  { regex: /^scroll\s+(down|up)(\s|$)/i, intent: 'scroll', targetGroup: 1 },
+  { regex: /^(scroll to|go to)\s+(top|bottom)$/i, intent: 'scroll_position', targetGroup: 2 },
+  { regex: /^(go back|back|previous page)$/i, intent: 'go_back' },
+  { regex: /^(go forward|forward)$/i, intent: 'go_forward' },
+  { regex: /^next\s+(heading|button|link|input|field)$/i, intent: 'next_element', targetGroup: 1 },
+  { regex: /^(what('?s| is) on this page|describe( this page)?|summarize( this page)?|page summary)$/i, intent: 'page_summary' },
+  { regex: /^what am i missing$/i, intent: 'what_am_i_missing' },
+  { regex: /^(help|what can i do|commands)$/i, intent: 'help' },
+  { regex: /^(stop|quiet|cancel|shut up|silence)$/i, intent: 'stop_speaking' },
+  { regex: /^settings$/i, intent: 'open_settings' },
+  { regex: /^(dismiss|close|hide)\s+(this|the)\s+(popup|modal|banner|dialog|overlay)$/i, intent: 'dismiss_popup' },
+  { regex: /^read\s+(the\s+)?(main content|article|body|text)$/i, intent: 'read_main_content' },
+];
+
 /**
  * Classify a voice command using rule-based patterns.
  * This is a lightweight copy for content-script use — the authoritative
@@ -16,23 +34,7 @@
 export function classifyIntent(text) {
   const normalized = text.toLowerCase().trim();
 
-  const patterns = [
-    { regex: /^(click|press|tap|select|activate)\s+(.+)$/i, intent: 'click', targetGroup: 2 },
-    { regex: /^(go to|open|navigate to|visit)\s+(.+)$/i, intent: 'navigate', targetGroup: 2 },
-    { regex: /^scroll\s+(down|up)$/i, intent: 'scroll', targetGroup: 1 },
-    { regex: /^(go back|back)$/i, intent: 'go_back' },
-    { regex: /^(go forward|forward)$/i, intent: 'go_forward' },
-    { regex: /^next\s+(heading|button|link|input|field)$/i, intent: 'next_element', targetGroup: 1 },
-    { regex: /^(what('?s| is) on this page|describe( this page)?|summarize( this page)?|page summary)$/i, intent: 'page_summary' },
-    { regex: /^what am i missing$/i, intent: 'what_am_i_missing' },
-    { regex: /^(help|what can i do|commands)$/i, intent: 'help' },
-    { regex: /^(stop|quiet|cancel|shut up)$/i, intent: 'stop_speaking' },
-    { regex: /^settings$/i, intent: 'open_settings' },
-    { regex: /^(dismiss|close|hide)\s+(this|the)\s+(popup|modal|banner)$/i, intent: 'dismiss_popup' },
-    { regex: /^read\s+(the\s+)?(main content|article|body)$/i, intent: 'read_main_content' },
-  ];
-
-  for (const pattern of patterns) {
+  for (const pattern of INTENT_PATTERNS) {
     const match = normalized.match(pattern.regex);
     if (match) {
       return {

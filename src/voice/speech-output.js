@@ -9,7 +9,7 @@ import { info, debug, warn } from '../utils/logger.js';
 
 const CONTEXT = 'SpeechOutput';
 
-/** @type {SpeechSynthesisUtterance[]} */
+/** @type {Array<{utterance: SpeechSynthesisUtterance, resolve: function}>} */
 let utteranceQueue = [];
 
 /** @type {boolean} */
@@ -69,6 +69,7 @@ export function speak(text, options = {}) {
     utterance.rate = options.rate || voiceConfig.rate;
     utterance.pitch = options.pitch || voiceConfig.pitch;
 
+    // Resolve voice lazily to handle Chrome's async voice loading
     const voice = getVoice(voiceConfig.voiceName);
     if (voice) {
       utterance.voice = voice;
@@ -90,12 +91,15 @@ export function speak(text, options = {}) {
     };
 
     if (isSpeaking && !options.interrupt) {
-      utteranceQueue.push(utterance);
-      debug(CONTEXT, `Queued: "${text.substring(0, 50)}..."`);
+      // Store resolve alongside utterance so queued promises don't hang
+      utteranceQueue.push({ utterance, resolve });
+      const preview = text.length > 50 ? text.substring(0, 50) + '...' : text;
+      debug(CONTEXT, `Queued: "${preview}"`);
     } else {
       isSpeaking = true;
       window.speechSynthesis.speak(utterance);
-      debug(CONTEXT, `Speaking: "${text.substring(0, 50)}..."`);
+      const preview = text.length > 50 ? text.substring(0, 50) + '...' : text;
+      debug(CONTEXT, `Speaking: "${preview}"`);
     }
   });
 }
@@ -104,6 +108,10 @@ export function speak(text, options = {}) {
  * Stop all speech immediately.
  */
 export function stopSpeaking() {
+  // Resolve all pending queue promises before clearing
+  for (const item of utteranceQueue) {
+    item.resolve();
+  }
   utteranceQueue = [];
   isSpeaking = false;
 
@@ -119,6 +127,10 @@ export function stopSpeaking() {
  * @returns {boolean}
  */
 export function getIsSpeaking() {
+  // Sync module state with browser state to prevent drift
+  if (!window.speechSynthesis?.speaking && isSpeaking) {
+    isSpeaking = false;
+  }
   return isSpeaking || (window.speechSynthesis?.speaking ?? false);
 }
 
@@ -149,17 +161,41 @@ export function updateVoiceConfig(config) {
  */
 function processQueue() {
   if (utteranceQueue.length === 0) return;
+
+  // Sync isSpeaking with browser state to prevent deadlock
+  if (!window.speechSynthesis?.speaking) {
+    isSpeaking = false;
+  }
+
   if (isSpeaking) return;
 
   const next = utteranceQueue.shift();
   if (next) {
+    const { utterance, resolve } = next;
+
+    // Wire up resolve for queued utterances
+    const originalOnEnd = utterance.onend;
+    utterance.onend = () => {
+      isSpeaking = false;
+      processQueue();
+      resolve();
+    };
+    utterance.onerror = (event) => {
+      if (event.error !== 'interrupted' && event.error !== 'canceled') {
+        warn(CONTEXT, `Speech error: ${event.error}`);
+      }
+      isSpeaking = false;
+      processQueue();
+      resolve();
+    };
+
     isSpeaking = true;
-    window.speechSynthesis.speak(next);
+    window.speechSynthesis.speak(utterance);
   }
 }
 
 /**
- * Get a voice by name.
+ * Get a voice by name — resolves lazily to handle Chrome's async voice loading.
  * @param {string|null} name
  * @returns {SpeechSynthesisVoice|null}
  */

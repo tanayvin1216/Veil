@@ -131,10 +131,11 @@ describe('Tier 1 DOM Repair', () => {
       expect(count).toBe(0);
     });
 
-    test('labels icon button from SVG title', () => {
+    test('skips button with visible SVG title text', () => {
+      // Button with <svg><title>Edit</title></svg> has visible text content — no repair needed
       document.body.innerHTML = '<button><svg><title>Edit</title></svg></button>';
       const count = repairButtons(document);
-      expect(document.querySelector('button').getAttribute('aria-label')).toBe('Edit');
+      expect(count).toBe(0);
     });
 
     test('infers label from cart icon class', () => {
@@ -195,7 +196,8 @@ describe('Tier 1 DOM Repair', () => {
       document.body.innerHTML = '<h1>Title</h1><h4>Subsection</h4>';
       const count = repairHeadingHierarchy(document);
       const h4 = document.querySelector('h4');
-      expect(h4.getAttribute('role')).toBe('heading');
+      // Native h4 should NOT get role="heading" (already implicit), just aria-level
+      expect(h4.getAttribute('role')).toBeNull();
       expect(h4.getAttribute('aria-level')).toBe('2');
       expect(count).toBe(1);
     });

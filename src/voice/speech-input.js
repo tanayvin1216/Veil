@@ -36,6 +36,12 @@ export function initSpeechInput({ onTranscript, onStateChange }) {
     return false;
   }
 
+  // Clean up previous instance to prevent event listener leaks on SPA re-init
+  if (recognition) {
+    try { recognition.abort(); } catch { /* already stopped */ }
+    recognition = null;
+  }
+
   onTranscriptCallback = onTranscript;
   onStateChangeCallback = onStateChange;
 
@@ -64,9 +70,19 @@ export function initSpeechInput({ onTranscript, onStateChange }) {
     if (event.error === 'aborted') {
       return;
     }
+
     logError(CONTEXT, `Recognition error: ${event.error}`);
     isListening = false;
     onStateChangeCallback?.(false);
+
+    // Surface permission errors to the user via callback
+    if (event.error === 'not-allowed') {
+      onTranscriptCallback?.('__error:mic_permission_denied');
+    } else if (event.error === 'audio-capture') {
+      onTranscriptCallback?.('__error:no_microphone');
+    } else if (event.error === 'network') {
+      onTranscriptCallback?.('__error:network_error');
+    }
   };
 
   recognition.onresult = (event) => {
