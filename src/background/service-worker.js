@@ -48,7 +48,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // Auto-start gesture recognition if enabled in settings
 chrome.storage.local.get('accessagent_gestures_enabled', (result) => {
   if (result['accessagent_gestures_enabled']) {
-    ensureGestureOffscreen()
+    ensureOffscreen()
       .then(() => {
         chrome.runtime.sendMessage({ type: 'GESTURE_START' }, () => {
           if (chrome.runtime.lastError) {
@@ -345,18 +345,71 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text using chrome.tts with a human-sounding voice.
- * Tries Samantha (Mac) first — if unavailable, uses system default.
+ * Speak text. Tries OpenAI TTS (human voice) first, falls back to chrome.tts.
  */
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
+
+  // Stop any current speech
   try { chrome.tts.stop(); } catch (e) { /* ignore */ }
-  chrome.tts.speak(text, { rate: 1.0, pitch: 1.0, voiceName: 'Samantha' }, () => {
-    if (chrome.runtime.lastError) {
-      chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
-    }
+  try {
+    chrome.runtime.sendMessage({ type: 'STOP_TTS_AUDIO' }, () => {
+      if (chrome.runtime.lastError) { /* offscreen might not exist */ }
+    });
+  } catch (e) { /* ignore */ }
+
+  // Try OpenAI TTS for human-sounding voice
+  speakWithOpenAI(text).catch(() => {
+    // Fall back to chrome.tts
+    chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
+  });
+}
+
+/**
+ * Speak using OpenAI TTS API — returns audio played via offscreen document.
+ * @param {string} text
+ */
+async function speakWithOpenAI(text) {
+  const result = await chrome.storage.local.get([STORAGE_KEYS.API_KEY, STORAGE_KEYS.API_PROVIDER]);
+  const apiKey = result[STORAGE_KEYS.API_KEY];
+  const provider = result[STORAGE_KEYS.API_PROVIDER] || 'openai';
+
+  // Only works with OpenAI keys
+  if (!apiKey || provider !== 'openai') {
+    throw new Error('no_openai_key');
+  }
+
+  const response = await fetch('https://api.openai.com/v1/audio/speech', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'tts-1',
+      input: text,
+      voice: 'fable',
+      response_format: 'mp3',
+      speed: 1.0,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI TTS error: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const audioData = Array.from(new Uint8Array(arrayBuffer));
+
+  // Ensure offscreen document exists for audio playback
+  await ensureOffscreen();
+
+  // Send audio to offscreen document
+  await chrome.runtime.sendMessage({
+    type: 'PLAY_TTS_AUDIO',
+    audioData,
   });
 }
 
@@ -410,16 +463,17 @@ function updateBadge(tabId, count) {
 // ─── Gesture Control ──────────────────────────────────────
 
 /**
- * Create or ensure the gesture offscreen document exists.
+ * Create or ensure the offscreen document exists.
+ * Handles both gesture recognition (USER_MEDIA) and TTS audio playback (AUDIO_PLAYBACK).
  */
-async function ensureGestureOffscreen() {
+async function ensureOffscreen() {
   if (gestureOffscreenCreated) return;
 
   try {
     await chrome.offscreen.createDocument({
       url: 'gesture/offscreen.html',
-      reasons: ['USER_MEDIA'],
-      justification: 'MediaPipe hand gesture recognition for accessibility navigation',
+      reasons: ['USER_MEDIA', 'AUDIO_PLAYBACK'],
+      justification: 'Hand gesture recognition and neural TTS audio playback for accessibility',
     });
     gestureOffscreenCreated = true;
   } catch (err) {
@@ -438,7 +492,7 @@ async function ensureGestureOffscreen() {
 async function toggleGestureMode(enabled) {
   if (enabled) {
     try {
-      await ensureGestureOffscreen();
+      await ensureOffscreen();
       // Small delay to let offscreen document initialize
       await new Promise(r => setTimeout(r, 500));
       const response = await chrome.runtime.sendMessage({ type: 'GESTURE_START' });

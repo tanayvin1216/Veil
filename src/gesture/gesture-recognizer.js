@@ -216,7 +216,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: true, running: isRunning });
       return false;
 
+    case 'PLAY_TTS_AUDIO': {
+      playTTSAudio(message.audioData)
+        .then(() => sendResponse({ success: true }))
+        .catch(err => sendResponse({ success: false, error: err.message }));
+      return true;
+    }
+
+    case 'STOP_TTS_AUDIO': {
+      const audio = document.getElementById('tts-audio');
+      if (audio) { audio.pause(); audio.currentTime = 0; }
+      sendResponse({ success: true });
+      return false;
+    }
+
     default:
       return false;
   }
 });
+
+/**
+ * Play TTS audio from raw byte array data.
+ * @param {number[]} audioData - MP3 audio as plain array
+ */
+async function playTTSAudio(audioData) {
+  const audio = document.getElementById('tts-audio');
+  if (!audio) throw new Error('No audio element');
+
+  // Stop any current playback
+  audio.pause();
+  audio.currentTime = 0;
+
+  // Revoke previous blob URL if any
+  if (audio.src && audio.src.startsWith('blob:')) {
+    URL.revokeObjectURL(audio.src);
+  }
+
+  const blob = new Blob([new Uint8Array(audioData)], { type: 'audio/mp3' });
+  audio.src = URL.createObjectURL(blob);
+  await audio.play();
+}
