@@ -66,6 +66,20 @@ function setupListeners() {
     elements.toggleElevenlabsVisibility.textContent = isPassword ? 'Hide' : 'Show';
   });
 
+  document.getElementById('grant-camera').addEventListener('click', async () => {
+    const status = document.getElementById('camera-status');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Got permission — stop the stream immediately
+      for (const track of stream.getTracks()) track.stop();
+      status.textContent = '✓ Camera access granted';
+      status.style.color = '#2D5A27';
+    } catch (err) {
+      status.textContent = 'Camera denied: ' + err.message;
+      status.style.color = '#cc0000';
+    }
+  });
+
   elements.voiceRate.addEventListener('input', () => {
     elements.rateValue.textContent = elements.voiceRate.value;
   });
