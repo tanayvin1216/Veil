@@ -345,15 +345,19 @@ async function handleToggle(payload) {
 }
 
 /**
- * Speak text using chrome.tts. Absolute minimum — no voice selection,
- * no retries, no nesting. Just speak.
+ * Speak text using chrome.tts with a human-sounding voice.
+ * Tries Samantha (Mac) first — if unavailable, uses system default.
  */
 function handleSpeak(payload) {
   const text = payload?.text;
   if (!text) return;
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
   try { chrome.tts.stop(); } catch (e) { /* ignore */ }
-  chrome.tts.speak(text, { rate: 1.0, pitch: 1.0, volume: 1.0 });
+  chrome.tts.speak(text, { rate: 1.0, pitch: 1.0, voiceName: 'Samantha' }, () => {
+    if (chrome.runtime.lastError) {
+      chrome.tts.speak(text, { rate: 1.0, pitch: 1.0 });
+    }
+  });
 }
 
 /**
