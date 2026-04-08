@@ -51,34 +51,49 @@ export function initSpeechInput({ onTranscript, onStateChange }) {
   recognition.lang = 'en-US';
   recognition.maxAlternatives = 1;
 
+  /** Whether the user deliberately stopped listening */
+  let userStopped = false;
+  let isStarting = false;
+  let restartAttempts = 0;
+
   recognition.onstart = () => {
     isListening = true;
+    isStarting = false;
+    restartAttempts = 0;
     onStateChangeCallback?.(true);
     info(CONTEXT, 'Listening started');
   };
 
-  /** Whether the user deliberately stopped listening */
-  let userStopped = false;
-
   recognition.onend = () => {
+    isStarting = false;
     info(CONTEXT, 'Recognition ended');
     if (!userStopped && isListening) {
-      // Chrome kills continuous recognition after silence — auto-restart
-      info(CONTEXT, 'Auto-restarting recognition');
-      try {
-        recognition.start();
-      } catch {
-        isListening = false;
-        onStateChangeCallback?.(false);
-      }
+      // Chrome kills continuous recognition after silence — auto-restart with backoff
+      const delay = Math.min(500 * Math.pow(2, restartAttempts), 15000);
+      restartAttempts++;
+      info(CONTEXT, `Auto-restarting in ${delay}ms (attempt ${restartAttempts})`);
+      setTimeout(() => {
+        if (userStopped) return;
+        try {
+          recognition.start();
+          isStarting = true;
+        } catch {
+          isListening = false;
+          onStateChangeCallback?.(false);
+        }
+      }, delay);
       return;
     }
     isListening = false;
     onStateChangeCallback?.(false);
   };
 
-  // Expose userStopped control on the recognition object
-  recognition._setUserStopped = (val) => { userStopped = val; };
+  // Expose controls on the recognition object
+  recognition._setUserStopped = (val) => {
+    userStopped = val;
+    if (val) restartAttempts = 0;
+  };
+  recognition._isStarting = () => isStarting;
 
   recognition.onerror = (event) => {
     if (event.error === 'no-speech') {
@@ -128,8 +143,8 @@ export function startListening() {
     return;
   }
 
-  if (isListening) {
-    info(CONTEXT, 'Already listening');
+  if (isListening || recognition._isStarting?.()) {
+    info(CONTEXT, 'Already listening or starting');
     return;
   }
 
@@ -137,7 +152,6 @@ export function startListening() {
     recognition._setUserStopped?.(false);
     recognition.start();
   } catch (err) {
-    // "already started" is not a real error — just means we're already listening
     if (err.message && err.message.includes('already started')) {
       isListening = true;
       onStateChangeCallback?.(true);

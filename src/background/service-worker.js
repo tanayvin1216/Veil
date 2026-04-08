@@ -270,6 +270,12 @@ async function handleVoiceCommand(payload) {
     const response = await processVoiceCommand(transcript, tabId);
     console.info('[AccessAgent] Voice response:', response?.confirmation?.substring(0, 80));
 
+    // Handle stop command — actually stop TTS
+    if (response.action?.action === 'stop_speaking') {
+      chrome.tts.stop();
+      return { success: true, data: response };
+    }
+
     if (response.confirmation && !response.silent) {
       await handleSpeak({ text: response.confirmation, rate: 0.9 });
     }
@@ -371,7 +377,7 @@ async function handleSpeak(payload) {
 
   const options = {
     rate: Math.max(0.5, Math.min(2.0, rate)),
-    pitch,
+    pitch: Math.max(0, Math.min(2.0, pitch)),
     volume: 1.0,
     enqueue: false,
   };
@@ -382,7 +388,20 @@ async function handleSpeak(payload) {
   }
 
   console.info('[AccessAgent] Speaking:', text.substring(0, 60), '| voice:', voice || 'default');
-  chrome.tts.speak(text, options);
+  chrome.tts.speak(text, options, () => {
+    if (chrome.runtime.lastError) {
+      console.error('[AccessAgent] TTS error:', chrome.runtime.lastError.message);
+      // Retry without custom voice — fall back to system default
+      if (voice) {
+        console.info('[AccessAgent] Retrying with default voice');
+        chrome.tts.speak(text, { rate: options.rate, pitch: options.pitch, volume: 1.0 }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('[AccessAgent] TTS retry also failed:', chrome.runtime.lastError.message);
+          }
+        });
+      }
+    }
+  });
 }
 
 /**
@@ -427,5 +446,7 @@ function updateBadge(tabId, count) {
   const text = count > 99 ? '99+' : String(count);
   chrome.action.setBadgeText({ text, tabId });
   chrome.action.setBadgeBackgroundColor({ color: '#2D5A27', tabId });
-  chrome.action.setBadgeTextColor({ color: '#FFFFFF', tabId });
+  if (chrome.action.setBadgeTextColor) {
+    chrome.action.setBadgeTextColor({ color: '#FFFFFF', tabId });
+  }
 }

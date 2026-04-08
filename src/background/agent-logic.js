@@ -23,7 +23,7 @@ export async function processVoiceCommand(transcript, tabId) {
   }
 
   if (!tabId) {
-    return { confirmation: 'No active tab found.', action: null };
+    return { confirmation: 'I can\'t reach this page right now. Try clicking on the page first.', action: null };
   }
 
   const normalized = transcript.toLowerCase().trim();

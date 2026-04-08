@@ -369,16 +369,16 @@ function announcePageOnLoad() {
   // Don't announce on extension pages
   if (window.location.protocol === 'chrome-extension:') return;
 
-  // Wait a moment for the page to settle, then announce
+  // Wait for page to settle and any prior TTS to finish, then announce
   setTimeout(() => {
     const summary = buildPageSummaryText();
     if (summary) {
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.SPEAK,
-        payload: { text: summary, rate: 0.9 },
-      });
+      chrome.runtime.sendMessage(
+        { type: MESSAGE_TYPES.SPEAK, payload: { text: summary, rate: 0.9 } },
+        () => { if (chrome.runtime.lastError) { /* ignore */ } }
+      );
     }
-  }, 1500);
+  }, 3000);
 }
 
 // ─── Auto Voice Activation ─────────────────────────────────
@@ -469,19 +469,21 @@ function activateVoiceFromBar(bar) {
   bar.remove();
 
   if (!voiceInitialized) {
-    initVoiceSystem();
+    const success = initVoiceSystem();
+    if (!success) {
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.SPEAK,
+        payload: { text: 'Speech recognition is not available in this browser. Try using Chrome.', rate: 0.9 },
+      });
+      return;
+    }
   }
 
-  const nowListening = toggleListening();
+  toggleListening();
 
   chrome.runtime.sendMessage({
     type: MESSAGE_TYPES.SPEAK,
-    payload: {
-      text: nowListening
-        ? 'Voice mode on. Start speaking.'
-        : 'Voice mode activated.',
-      rate: 0.9,
-    },
+    payload: { text: 'Voice mode on. Start speaking.', rate: 0.9 },
   });
 }
 
@@ -512,10 +514,14 @@ function initVoiceSystem() {
         return;
       }
       info(CONTEXT, `Voice command: "${transcript}"`);
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.VOICE_COMMAND,
-        payload: { transcript, tabId: null },
-      });
+      chrome.runtime.sendMessage(
+        { type: MESSAGE_TYPES.VOICE_COMMAND, payload: { transcript, tabId: null } },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            warn(CONTEXT, 'Voice command failed:', chrome.runtime.lastError.message);
+          }
+        }
+      );
     },
     onStateChange: () => {
       // Auto-restart handles state — don't announce every pause/restart
