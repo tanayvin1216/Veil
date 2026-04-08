@@ -32,5 +32,8 @@
     "testMatch": [
       "**/*.test.js"
     ]
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.34"
   }
 }
