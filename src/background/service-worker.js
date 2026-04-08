@@ -344,62 +344,30 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
-/** Cached preferred voice name — survives until service worker restarts */
-let preferredVoice = null;
-
 /**
- * Find the best voice. Runs once at startup. Callback-based, cannot crash.
- */
-function findBestVoice() {
-  chrome.tts.getVoices((voices) => {
-    if (!voices || voices.length === 0) return;
-
-    const preferred = [
-      'Google UK English Female',
-      'Google UK English Male',
-      'Google US English',
-      'Samantha',
-      'Karen',
-      'Moira',
-      'Tessa',
-      'Fiona',
-      'Victoria',
-      'Microsoft Zira',
-    ];
-
-    for (const name of preferred) {
-      const match = voices.find(v => v.voiceName === name);
-      if (match) {
-        preferredVoice = match.voiceName;
-        console.info('[AccessAgent] Selected voice:', preferredVoice);
-        return;
-      }
-    }
-
-    const english = voices.find(v => v.lang?.startsWith('en'));
-    if (english) {
-      preferredVoice = english.voiceName;
-      console.info('[AccessAgent] Fallback voice:', preferredVoice);
-    }
-  });
-}
-
-findBestVoice();
-
-/**
- * Speak text using chrome.tts with the best available voice.
+ * Speak text. Routes to content script's Web Speech API (has Google UK English
+ * Female — the good British voice). Falls back to chrome.tts if content script
+ * is not reachable.
  */
 function handleSpeak(payload) {
   const text = typeof payload === 'string' ? payload : payload?.text;
   if (!text) return;
   console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
 
-  chrome.tts.stop();
-
-  const opts = { rate: 0.9, pitch: 0.95, volume: 1.0, enqueue: false };
-  if (preferredVoice) opts.voiceName = preferredVoice;
-
-  chrome.tts.speak(text, opts);
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (chrome.runtime.lastError || !tabs?.[0]?.id) {
+      chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
+      return;
+    }
+    chrome.tabs.sendMessage(tabs[0].id, {
+      type: 'web_speech_speak',
+      payload: { text },
+    }, () => {
+      if (chrome.runtime.lastError) {
+        chrome.tts.speak(text, { rate: 0.9, pitch: 0.95 });
+      }
+    });
+  });
 }
 
 /**
