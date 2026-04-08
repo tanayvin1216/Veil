@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=360">
+  <title>AccessAgent</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup" role="main" aria-label="AccessAgent status panel">
+
+    <header class="popup-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <div class="brand-text">
+          <h1 class="brand-name">AccessAgent</h1>
+          <p class="brand-tagline">Personal Accessibility Agent</p>
+        </div>
+      </div>
+      <button
+        id="toggle-btn"
+        class="toggle"
+        aria-label="Toggle AccessAgent on or off"
+        aria-pressed="true"
+      >
+        <span class="toggle-track">
+          <span class="toggle-thumb"></span>
+        </span>
+      </button>
+    </header>
+
+    <section class="status" aria-live="polite">
+      <div id="status-indicator" class="status-dot status-dot--active" aria-hidden="true"></div>
+      <span id="status-text" class="status-label">Active on this page</span>
+    </section>
+
+    <section class="repairs" aria-label="Repair summary">
+      <h2 class="section-title">Repairs on this page</h2>
+      <dl class="repair-grid" id="repair-list">
+        <div class="repair-item">
+          <dt class="repair-label">Images fixed</dt>
+          <dd class="repair-count" id="count-images">—</dd>
+        </div>
+        <div class="repair-item">
+          <dt class="repair-label">Buttons labeled</dt>
+          <dd class="repair-count" id="count-buttons">—</dd>
+        </div>
+        <div class="repair-item">
+          <dt class="repair-label">Form labels</dt>
+          <dd class="repair-count" id="count-forms">—</dd>
+        </div>
+        <div class="repair-item">
+          <dt class="repair-label">Headings fixed</dt>
+          <dd class="repair-count" id="count-headings">—</dd>
+        </div>
+        <div class="repair-item">
+          <dt class="repair-label">Landmarks added</dt>
+          <dd class="repair-count" id="count-landmarks">—</dd>
+        </div>
+        <div class="repair-item">
+          <dt class="repair-label">Focus traps</dt>
+          <dd class="repair-count" id="count-focus">—</dd>
+        </div>
+      </dl>
+      <p class="repair-total">
+        <strong id="total-repairs">0</strong> total repairs
+        <span class="repair-time" id="repair-time"></span>
+      </p>
+    </section>
+
+    <section class="shortcuts" aria-label="Keyboard shortcuts">
+      <h2 class="section-title">Shortcuts</h2>
+      <ul class="shortcut-list">
+        <li>
+          <kbd>Alt+Shift+A</kbd>
+          <span>Voice agent</span>
+        </li>
+        <li>
+          <kbd>Alt+Shift+S</kbd>
+          <span>Page summary</span>
+        </li>
+        <li>
+          <kbd>Alt+Shift+M</kbd>
+          <span>What am I missing?</span>
+        </li>
+      </ul>
+    </section>
+
+    <footer class="popup-footer">
+      <a href="#" id="settings-link" class="footer-link">Settings</a>
+      <span class="footer-divider" aria-hidden="true">·</span>
+      <span class="footer-version">v1.0.0</span>
+    </footer>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

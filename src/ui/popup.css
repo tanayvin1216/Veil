@@ -1,0 +1,344 @@
+/*
+ * AccessAgent Popup — Utilitarian, high-contrast, information-dense.
+ * Aesthetic: Industrial/Utilitarian — no decoration, pure function.
+ * Reference: Linear's sidebar density, Raycast's command palette economy.
+ *
+ * Design tokens:
+ *   Primary: #1A1A1A (ink)
+ *   Accent:  #2D5A27 (forest — suggests growth/repair)
+ *   Surface: #FAFAF8 (warm off-white)
+ *   Border:  #D4D4D0 (stone)
+ *   Muted:   #8A8A85 (ash)
+ *   Type:    "IBM Plex Mono" / system monospace
+ *   Scale:   4px base unit
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  font-family: 'IBM Plex Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #1A1A1A;
+  background: #FAFAF8;
+  -webkit-font-smoothing: antialiased;
+}
+
+.popup {
+  padding: 16px;
+}
+
+/* ─── Header ─────────────────────────────────────────── */
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #1A1A1A;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #1A1A1A;
+  color: #FAFAF8;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.brand-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.brand-tagline {
+  font-size: 10px;
+  color: #8A8A85;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ─── Toggle ─────────────────────────────────────────── */
+
+.toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.toggle-track {
+  display: block;
+  width: 36px;
+  height: 20px;
+  background: #D4D4D0;
+  border-radius: 2px;
+  position: relative;
+  transition: background 150ms ease;
+}
+
+.toggle[aria-pressed="true"] .toggle-track {
+  background: #2D5A27;
+}
+
+.toggle-thumb {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: #FAFAF8;
+  border-radius: 1px;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 150ms ease;
+}
+
+.toggle[aria-pressed="true"] .toggle-thumb {
+  transform: translateX(16px);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid #2D5A27;
+  outline-offset: 2px;
+}
+
+/* ─── Status ─────────────────────────────────────────── */
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D4D4D0;
+  flex-shrink: 0;
+}
+
+.status-dot--active {
+  background: #2D5A27;
+}
+
+.status-dot--disabled {
+  background: #8A8A85;
+}
+
+.status-label {
+  font-size: 11px;
+  color: #8A8A85;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Repairs ────────────────────────────────────────── */
+
+.section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8A8A85;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #E8E8E4;
+  margin-bottom: 8px;
+}
+
+.repair-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.repair-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid #F0F0EC;
+}
+
+.repair-item:nth-child(odd) {
+  padding-right: 12px;
+  border-right: 1px solid #F0F0EC;
+}
+
+.repair-item:nth-child(even) {
+  padding-left: 12px;
+}
+
+.repair-label {
+  font-size: 11px;
+  color: #5A5A55;
+  font-weight: 400;
+}
+
+.repair-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1A1A1A;
+  font-variant-numeric: tabular-nums;
+}
+
+.repair-total {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #1A1A1A;
+  font-size: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.repair-total strong {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.repair-time {
+  color: #8A8A85;
+  font-size: 10px;
+  margin-left: auto;
+}
+
+/* ─── Shortcuts ──────────────────────────────────────── */
+
+.shortcuts {
+  margin-top: 16px;
+}
+
+.shortcut-list {
+  list-style: none;
+}
+
+.shortcut-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  font-size: 11px;
+  color: #5A5A55;
+}
+
+.shortcut-list li + li {
+  border-top: 1px solid #F0F0EC;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  color: #1A1A1A;
+  background: #EDEDEA;
+  padding: 2px 6px;
+  border: 1px solid #D4D4D0;
+  border-radius: 2px;
+  letter-spacing: 0.01em;
+}
+
+/* ─── Footer ─────────────────────────────────────────── */
+
+.popup-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #E8E8E4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.footer-link {
+  color: #2D5A27;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
+.footer-link:focus-visible {
+  outline: 2px solid #2D5A27;
+  outline-offset: 2px;
+}
+
+.footer-divider {
+  color: #D4D4D0;
+}
+
+.footer-version {
+  color: #8A8A85;
+}
+
+/* ─── Disabled state ─────────────────────────────────── */
+
+.popup--disabled .repairs,
+.popup--disabled .shortcuts {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ─── Focus styles ───────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid #2D5A27;
+  outline-offset: 2px;
+}
+
+/* ─── High contrast mode ─────────────────────────────── */
+
+@media (prefers-contrast: high) {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .repair-label,
+  .status-label,
+  .section-title {
+    color: #000;
+  }
+
+  .popup-header,
+  .repair-total {
+    border-color: #000;
+  }
+
+  kbd {
+    border-color: #000;
+    background: #eee;
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle-track,
+  .toggle-thumb {
+    transition: none;
+  }
+}
