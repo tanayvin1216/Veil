@@ -6,7 +6,7 @@
 
 import { MESSAGE_TYPES, STORAGE_KEYS } from '../utils/constants.js';
 import { initializeDefaults } from '../utils/storage.js';
-import { analyzeScreenshot } from './api-client.js';
+import { analyzeScreenshot, analyzePageForNavigation } from './api-client.js';
 import { processVoiceCommand } from './agent-logic.js';
 
 /** @type {Map<number, object>} Tab ID → repair report */
@@ -577,7 +577,6 @@ async function handleGestureCommand(payload) {
       const screenshot = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
       if (screenshot) {
         const base64 = screenshot.replace(/^data:image\/png;base64,/, '');
-        const { analyzePageForNavigation } = await import('./api-client.js');
         const pageStructure = await chrome.tabs.sendMessage(tabId, { type: 'get_page_structure' });
         const result = await analyzePageForNavigation(
           base64,
