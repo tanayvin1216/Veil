@@ -213,7 +213,13 @@ async function handleTier3Request(tabId, payload) {
  * @returns {Promise<object>}
  */
 async function handleVoiceCommand(payload) {
-  const { transcript, tabId } = payload;
+  let { transcript, tabId } = payload;
+
+  // If content script didn't know its tab ID, look it up
+  if (!tabId) {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    tabId = activeTab?.id || null;
+  }
 
   try {
     const response = await processVoiceCommand(transcript, tabId);

@@ -368,9 +368,9 @@ function handleToggleVoice() {
           payload: { transcript, tabId: null },
         });
       },
-      onStateChange: (isListening) => {
-        const status = isListening ? 'Voice agent listening.' : 'Voice agent stopped.';
-        announce(document, 'accessagent-announcements', status);
+      onStateChange: (listening) => {
+        // Don't announce every pause/restart — only deliberate toggles
+        // The toggle function handles its own announcement
       },
     });
 

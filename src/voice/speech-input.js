@@ -57,11 +57,28 @@ export function initSpeechInput({ onTranscript, onStateChange }) {
     info(CONTEXT, 'Listening started');
   };
 
+  /** Whether the user deliberately stopped listening */
+  let userStopped = false;
+
   recognition.onend = () => {
+    info(CONTEXT, 'Recognition ended');
+    if (!userStopped && isListening) {
+      // Chrome kills continuous recognition after silence — auto-restart
+      info(CONTEXT, 'Auto-restarting recognition');
+      try {
+        recognition.start();
+      } catch {
+        isListening = false;
+        onStateChangeCallback?.(false);
+      }
+      return;
+    }
     isListening = false;
     onStateChangeCallback?.(false);
-    info(CONTEXT, 'Listening ended');
   };
+
+  // Expose userStopped control on the recognition object
+  recognition._setUserStopped = (val) => { userStopped = val; };
 
   recognition.onerror = (event) => {
     if (event.error === 'no-speech') {
@@ -117,6 +134,7 @@ export function startListening() {
   }
 
   try {
+    recognition._setUserStopped?.(false);
     recognition.start();
   } catch (err) {
     // "already started" is not a real error — just means we're already listening
@@ -138,6 +156,7 @@ export function stopListening() {
   if (!isListening) return;
 
   try {
+    recognition._setUserStopped?.(true);
     recognition.stop();
   } catch (err) {
     logError(CONTEXT, 'Failed to stop recognition:', err.message);
