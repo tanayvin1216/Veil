@@ -694,6 +694,15 @@ async function autoActivateVoice() {
 
   // Focus the button so screen reader announces it immediately
   setTimeout(() => btn.focus(), 200);
+
+  // Speak the prompt audibly so blind users without an active screen reader
+  // know to press Enter. Relies on offscreen TTS (no user gesture required).
+  setTimeout(() => {
+    chrome.runtime.sendMessage({
+      type: MESSAGE_TYPES.SPEAK,
+      payload: { text: 'Press Enter to activate Veil voice mode.', rate: 1.0 },
+    }, () => { if (chrome.runtime.lastError) { /* ignore */ } });
+  }, 450);
 }
 
 /**
