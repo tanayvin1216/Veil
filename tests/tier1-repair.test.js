@@ -275,7 +275,7 @@ describe('Tier 1 DOM Repair', () => {
     test('adds close button to dialog without one', () => {
       document.body.innerHTML = '<div role="dialog"><p>Modal content</p></div>';
       const count = repairFocusTraps(document);
-      const closeBtn = document.querySelector('[data-accessagent="focus-escape"]');
+      const closeBtn = document.querySelector('[data-veil="focus-escape"]');
       expect(closeBtn).not.toBeNull();
       expect(closeBtn.getAttribute('aria-label')).toBe('Close dialog');
       expect(count).toBe(1);
@@ -289,7 +289,7 @@ describe('Tier 1 DOM Repair', () => {
         </div>
       `;
       const count = repairFocusTraps(document);
-      const escapeButtons = document.querySelectorAll('[data-accessagent="focus-escape"]');
+      const escapeButtons = document.querySelectorAll('[data-veil="focus-escape"]');
       expect(escapeButtons.length).toBe(0);
     });
 
@@ -306,7 +306,7 @@ describe('Tier 1 DOM Repair', () => {
     test('injects skip link when main content exists', () => {
       document.body.innerHTML = '<main><p>Content</p></main>';
       const count = repairSkipNavigation(document);
-      const skipLink = document.querySelector('.accessagent-skip-link');
+      const skipLink = document.querySelector('.veil-skip-link');
       expect(skipLink).not.toBeNull();
       expect(skipLink.textContent).toBe('Skip to main content');
       expect(count).toBe(1);
@@ -321,7 +321,7 @@ describe('Tier 1 DOM Repair', () => {
     test('uses existing main content ID', () => {
       document.body.innerHTML = '<main id="page-main"><p>Content</p></main>';
       repairSkipNavigation(document);
-      const skipLink = document.querySelector('.accessagent-skip-link');
+      const skipLink = document.querySelector('.veil-skip-link');
       expect(skipLink.getAttribute('href')).toBe('#page-main');
     });
   });

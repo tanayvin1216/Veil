@@ -5,7 +5,7 @@
 
 import { LOG_LEVELS } from './constants.js';
 
-const PREFIX = '[AccessAgent]';
+const PREFIX = '[Veil]';
 
 let currentLevel = LOG_LEVELS.INFO;
 

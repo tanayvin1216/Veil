@@ -596,12 +596,12 @@ function announcePageOnLoad() {
 function announceIfNavigated() {
   if (window.location.protocol === 'chrome-extension:') return;
 
-  chrome.storage.local.get('accessagent_pending_announce', (result) => {
+  chrome.storage.local.get('veil_pending_announce', (result) => {
     if (chrome.runtime.lastError) return;
-    if (!result['accessagent_pending_announce']) return;
+    if (!result['veil_pending_announce']) return;
 
     // Clear the flag
-    chrome.storage.local.remove('accessagent_pending_announce');
+    chrome.storage.local.remove('veil_pending_announce');
 
     // Wait for page to settle, then announce
     setTimeout(() => {
@@ -626,8 +626,8 @@ function announceIfNavigated() {
 async function autoActivateVoice() {
   // Check if user has voice mode enabled in settings
   try {
-    const result = await chrome.storage.local.get('accessagent_voice_auto');
-    if (result['accessagent_voice_auto'] === false) return;
+    const result = await chrome.storage.local.get('veil_voice_auto');
+    if (result['veil_voice_auto'] === false) return;
   } catch {
     // Default: on
   }
@@ -641,14 +641,14 @@ async function autoActivateVoice() {
   if (!document.body) return;
 
   // Remove any existing prompt
-  const existing = document.getElementById('accessagent-voice-prompt');
+  const existing = document.getElementById('veil-voice-prompt');
   if (existing) existing.remove();
 
   // Create the bar
   const bar = document.createElement('div');
-  bar.id = 'accessagent-voice-prompt';
+  bar.id = 'veil-voice-prompt';
   bar.setAttribute('role', 'banner');
-  bar.setAttribute('aria-label', 'AccessAgent voice activation');
+  bar.setAttribute('aria-label', 'Veil voice activation');
   bar.style.cssText = [
     'position: fixed',
     'top: 0',
@@ -665,7 +665,7 @@ async function autoActivateVoice() {
   ].join(';');
 
   const btn = document.createElement('button');
-  btn.setAttribute('aria-label', 'Activate AccessAgent voice mode. Press Enter to start talking.');
+  btn.setAttribute('aria-label', 'Activate Veil voice mode. Press Enter to start talking.');
   btn.style.cssText = [
     'display: block',
     'width: 100%',
@@ -679,7 +679,7 @@ async function autoActivateVoice() {
     'cursor: pointer',
     'text-align: center',
   ].join(';');
-  btn.textContent = 'AccessAgent — Press Enter to start voice mode';
+  btn.textContent = 'Veil — Press Enter to start voice mode';
 
   btn.addEventListener('click', () => activateVoiceFromBar(bar));
   btn.addEventListener('keydown', (e) => {

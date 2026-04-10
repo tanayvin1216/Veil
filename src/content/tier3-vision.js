@@ -10,7 +10,7 @@ import { info, warn, error as logError } from '../utils/logger.js';
 import { announce, getRepairCounts } from './aria-injector.js';
 
 const CONTEXT = 'Tier3';
-const LIVE_REGION_ID = 'accessagent-announcements';
+const LIVE_REGION_ID = 'veil-announcements';
 
 /**
  * Run Tier 3 vision analysis asynchronously.

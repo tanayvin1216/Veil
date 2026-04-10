@@ -1,10 +1,10 @@
 /*
- * AccessAgent content script styles.
+ * Veil content script styles.
  * Minimal footprint — only styles for injected elements.
  * Must not conflict with any website styles.
  */
 
-.accessagent-skip-link {
+.veil-skip-link {
   position: absolute;
   top: -9999px;
   left: -9999px;
@@ -18,7 +18,7 @@
   line-height: 1.4;
 }
 
-.accessagent-skip-link:focus {
+.veil-skip-link:focus {
   top: 0;
   left: 0;
   outline: 3px solid #2D5A27;

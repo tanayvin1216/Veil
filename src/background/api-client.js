@@ -100,7 +100,7 @@ async function callOpenAI(apiKey, prompt, imageBase64) {
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error('[AccessAgent] OpenAI API error body:', errorBody);
+    console.error('[Veil] OpenAI API error body:', errorBody);
     throw new Error(`OpenAI API error: ${response.status}`);
   }
 

@@ -8,8 +8,8 @@
 import { debug } from '../utils/logger.js';
 
 const CONTEXT = 'AriaInjector';
-const DATA_ATTR = 'data-accessagent';
-const DATA_REPAIR_TYPE = 'data-accessagent-repair';
+const DATA_ATTR = 'data-veil';
+const DATA_REPAIR_TYPE = 'data-veil-repair';
 
 /**
  * Set an ARIA attribute on an element only if it doesn't already have a valid value.
@@ -108,7 +108,7 @@ export function injectSkipLink(doc, targetId) {
   skipLink.href = `#${targetId}`;
   skipLink.textContent = 'Skip to main content';
   skipLink.setAttribute(DATA_ATTR, 'skip-link');
-  skipLink.setAttribute('class', 'accessagent-skip-link');
+  skipLink.setAttribute('class', 'veil-skip-link');
   skipLink.style.cssText = [
     'position: absolute',
     'top: -9999px',
@@ -204,7 +204,7 @@ export function announce(doc, regionId, message) {
 }
 
 /**
- * Mark an element as repaired by AccessAgent for tracking.
+ * Mark an element as repaired by Veil for tracking.
  * @param {HTMLElement} element - The repaired element
  * @param {string} repairType - Type of repair applied
  */
@@ -219,7 +219,7 @@ function markAsRepaired(element, repairType) {
 }
 
 /**
- * Count all elements repaired by AccessAgent on the page.
+ * Count all elements repaired by Veil on the page.
  * @param {Document} doc - The document to scan
  * @returns {Record<string, number>} Counts by repair type
  */

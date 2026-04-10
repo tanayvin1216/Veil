@@ -45,7 +45,7 @@ describe('Tier 2 Smart Repair', () => {
   describe('handleCookieBanners', () => {
     test('detects OneTrust banner by ID', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div id="onetrust-banner-sdk">
           <button id="onetrust-reject-all-handler">Reject All</button>
           <button id="onetrust-accept-btn-handler">Accept All</button>
@@ -58,7 +58,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('detects CookieBot banner', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div id="CybotCookiebotDialog">
           <button id="CybotCookiebotDialogBodyButtonDecline">Decline</button>
         </div>
@@ -69,7 +69,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('detects banner by class name', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="cookie-banner">
           <button class="reject-all">Reject</button>
         </div>
@@ -80,7 +80,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('falls back to text-based reject button', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="cookie-consent">
           <p>We use cookies</p>
           <button>Accept All</button>
@@ -100,7 +100,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('prefers reject over accept', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="cookie-banner">
           <button class="accept-all">Accept</button>
           <button class="reject-all">Reject</button>
@@ -114,7 +114,7 @@ describe('Tier 2 Smart Repair', () => {
       // Use consent-modal class (not cookie-banner) to avoid the
       // ".cookie-banner button:last-child" reject selector
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="consent-modal">
           <p>We use cookies</p>
           <button class="accept-cookies">Accept All Cookies</button>
@@ -128,7 +128,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('returns detected-only when banner has no actionable buttons', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="cookie-consent">
           <p>This site uses cookies for analytics.</p>
         </div>
@@ -142,7 +142,7 @@ describe('Tier 2 Smart Repair', () => {
   describe('runTier2Repairs', () => {
     test('orchestrates cookie and CAPTCHA detection', async () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div id="onetrust-banner-sdk">
           <button id="onetrust-reject-all-handler">Reject All</button>
         </div>
@@ -164,7 +164,7 @@ describe('Tier 2 Smart Repair', () => {
   describe('detectCaptchas', () => {
     test('detects reCAPTCHA iframe', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <iframe src="https://www.google.com/recaptcha/api/anchor"></iframe>
       `;
       const result = detectCaptchas(document);
@@ -174,7 +174,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('detects hCaptcha by class', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="h-captcha" data-sitekey="abc123"></div>
       `;
       const result = detectCaptchas(document);
@@ -184,7 +184,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('detects Cloudflare Turnstile', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="cf-turnstile"></div>
       `;
       const result = detectCaptchas(document);
@@ -200,7 +200,7 @@ describe('Tier 2 Smart Repair', () => {
 
     test('detects audio alternative', () => {
       document.body.innerHTML = `
-        <div id="accessagent-announcements" aria-live="polite"></div>
+        <div id="veil-announcements" aria-live="polite"></div>
         <div class="g-recaptcha">
           <button id="recaptcha-audio-button">Audio challenge</button>
         </div>

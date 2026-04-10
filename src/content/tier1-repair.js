@@ -34,7 +34,7 @@ export function runTier1Repairs(doc) {
   report.focusTraps = repairFocusTraps(doc);
   report.skipLink = repairSkipNavigation(doc);
 
-  injectLiveRegion(doc, 'accessagent-announcements', 'polite');
+  injectLiveRegion(doc, 'veil-announcements', 'polite');
 
   report.totalRepairs = Object.values(report)
     .filter(v => typeof v === 'number')
@@ -493,7 +493,7 @@ export function repairFocusTraps(doc) {
     if (!hasCloseButton) {
       const closeButton = doc.createElement('button');
       closeButton.setAttribute('aria-label', 'Close dialog');
-      closeButton.setAttribute('data-accessagent', 'focus-escape');
+      closeButton.setAttribute('data-veil', 'focus-escape');
       closeButton.style.cssText = [
         'position: absolute',
         'top: 8px',
@@ -545,7 +545,7 @@ export function repairSkipNavigation(doc) {
   if (!mainContent) return 0;
 
   if (!mainContent.id) {
-    mainContent.id = 'accessagent-main-content';
+    mainContent.id = 'veil-main-content';
   }
 
   return injectSkipLink(doc, mainContent.id) ? 1 : 0;

@@ -1,5 +1,5 @@
 /**
- * AccessAgent constants — hotkeys, selectors, patterns, and defaults.
+ * Veil constants — hotkeys, selectors, patterns, and defaults.
  * @module constants
  */
 
@@ -12,18 +12,18 @@ export const HOTKEYS = {
 
 /** Extension storage keys */
 export const STORAGE_KEYS = {
-  API_KEY: 'accessagent_api_key',
-  API_PROVIDER: 'accessagent_api_provider',
-  ENABLED: 'accessagent_enabled',
-  TIER1_ENABLED: 'accessagent_tier1_enabled',
-  TIER2_ENABLED: 'accessagent_tier2_enabled',
-  TIER3_ENABLED: 'accessagent_tier3_enabled',
-  VOICE_RATE: 'accessagent_voice_rate',
-  VOICE_PITCH: 'accessagent_voice_pitch',
-  VOICE_NAME: 'accessagent_voice_name',
-  SPEECH_ENGINE: 'accessagent_speech_engine',
-  REPAIR_REPORT: 'accessagent_repair_report',
-  CONVERSATION_HISTORY: 'accessagent_conversation_history',
+  API_KEY: 'veil_api_key',
+  API_PROVIDER: 'veil_api_provider',
+  ENABLED: 'veil_enabled',
+  TIER1_ENABLED: 'veil_tier1_enabled',
+  TIER2_ENABLED: 'veil_tier2_enabled',
+  TIER3_ENABLED: 'veil_tier3_enabled',
+  VOICE_RATE: 'veil_voice_rate',
+  VOICE_PITCH: 'veil_voice_pitch',
+  VOICE_NAME: 'veil_voice_name',
+  SPEECH_ENGINE: 'veil_speech_engine',
+  REPAIR_REPORT: 'veil_repair_report',
+  CONVERSATION_HISTORY: 'veil_conversation_history',
 };
 
 /** Default settings applied on first install */

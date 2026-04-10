@@ -21,7 +21,7 @@ let gestureOffscreenCreated = false;
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     await initializeDefaults();
-    console.info('[AccessAgent] Installed — defaults initialized');
+    console.info('[Veil] Installed — defaults initialized');
     chrome.tabs.create({ url: chrome.runtime.getURL('ui/welcome.html') });
   }
 
@@ -46,17 +46,17 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 
 // Auto-start gesture recognition if enabled in settings
-chrome.storage.local.get('accessagent_gestures_enabled', (result) => {
-  if (result['accessagent_gestures_enabled']) {
+chrome.storage.local.get('veil_gestures_enabled', (result) => {
+  if (result['veil_gestures_enabled']) {
     ensureOffscreen()
       .then(() => {
         chrome.runtime.sendMessage({ type: 'GESTURE_START' }, () => {
           if (chrome.runtime.lastError) {
-            console.warn('[AccessAgent] Gesture start msg failed:', chrome.runtime.lastError.message);
+            console.warn('[Veil] Gesture start msg failed:', chrome.runtime.lastError.message);
           }
         });
       })
-      .catch(err => console.warn('[AccessAgent] Gesture auto-start failed:', err.message));
+      .catch(err => console.warn('[Veil] Gesture auto-start failed:', err.message));
   }
 });
 
@@ -76,7 +76,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     }
   } catch {
     handleSpeak({
-      text: 'AccessAgent cannot run on this page. Go to a regular website first.',
+      text: 'Veil cannot run on this page. Go to a regular website first.',
     });
   }
 });
@@ -310,9 +310,9 @@ async function handleVoiceCommand(payload) {
   }
 
   try {
-    console.info('[AccessAgent] Voice command:', transcript, 'tabId:', tabId);
+    console.info('[Veil] Voice command:', transcript, 'tabId:', tabId);
     const response = await processVoiceCommand(transcript, tabId);
-    console.info('[AccessAgent] Voice response:', response?.confirmation?.substring(0, 80));
+    console.info('[Veil] Voice response:', response?.confirmation?.substring(0, 80));
 
     // Handle stop command — actually stop TTS
     if (response.action?.action === 'stop_speaking') {
@@ -326,7 +326,7 @@ async function handleVoiceCommand(payload) {
 
     return { success: true, data: response };
   } catch (err) {
-    console.error('[AccessAgent] Voice command failed:', err);
+    console.error('[Veil] Voice command failed:', err);
     handleSpeak({ text: 'Sorry, something went wrong. Try again.', rate: 0.9 });
     return { success: false, error: err.message };
   }
@@ -370,7 +370,7 @@ function estimateSpeechDurationMs(text) {
 function handleSpeak(payload) {
   const text = typeof payload === 'string' ? payload : payload?.text;
   if (!text) return;
-  console.info('[AccessAgent] SPEAK:', text.substring(0, 80));
+  console.info('[Veil] SPEAK:', text.substring(0, 80));
 
   // Stop any current speech
   try { chrome.tts.stop(); } catch (e) { /* ignore */ }
@@ -381,14 +381,14 @@ function handleSpeak(payload) {
   // Start backstop timer — unmute no matter what if nothing else does.
   clearTimeout(speakBackstopTimer);
   speakBackstopTimer = setTimeout(() => {
-    console.warn('[AccessAgent] Speak backstop fired — force-unmuting mic');
+    console.warn('[Veil] Speak backstop fired — force-unmuting mic');
     muteMic(false);
     speakBackstopTimer = null;
   }, estimateSpeechDurationMs(text));
 
   // Try ElevenLabs, fall back to chrome.tts
   speakWithElevenLabs(text).catch((err) => {
-    console.warn('[AccessAgent] ElevenLabs failed, using chrome.tts:', err.message);
+    console.warn('[Veil] ElevenLabs failed, using chrome.tts:', err.message);
     chrome.tts.speak(text, {
       rate: 0.9,
       pitch: 0.95,
@@ -419,8 +419,8 @@ function muteMic(muted) {
  * Audio played via the offscreen document.
  */
 async function speakWithElevenLabs(text) {
-  const result = await chrome.storage.local.get('accessagent_elevenlabs_key');
-  const apiKey = result['accessagent_elevenlabs_key'];
+  const result = await chrome.storage.local.get('veil_elevenlabs_key');
+  const apiKey = result['veil_elevenlabs_key'];
 
   if (!apiKey) throw new Error('no_elevenlabs_key');
 
@@ -546,17 +546,17 @@ async function toggleGestureMode(enabled) {
         handleSpeak({ text: response?.error || 'Could not start gesture control.' });
       }
     } catch (err) {
-      console.warn('[AccessAgent] Gesture toggle failed:', err.message);
+      console.warn('[Veil] Gesture toggle failed:', err.message);
       handleSpeak({ text: 'Gesture control could not start. Try again.' });
     }
-    await chrome.storage.local.set({ 'accessagent_gestures_enabled': true });
+    await chrome.storage.local.set({ 'veil_gestures_enabled': true });
     return { success: true, enabled: true };
   } else {
     try {
       await chrome.runtime.sendMessage({ type: 'GESTURE_STOP' });
     } catch { /* offscreen might not exist */ }
     handleSpeak({ text: 'Gesture control off.' });
-    await chrome.storage.local.set({ 'accessagent_gestures_enabled': false });
+    await chrome.storage.local.set({ 'veil_gestures_enabled': false });
     return { success: true, enabled: false };
   }
 }
@@ -568,7 +568,7 @@ async function toggleGestureMode(enabled) {
  */
 async function handleGestureCommand(payload) {
   const { intent, label, gesture } = payload;
-  console.info(`[AccessAgent] Gesture: ${gesture} → ${label}`);
+  console.info(`[Veil] Gesture: ${gesture} → ${label}`);
 
   // STOP — must be instant, no routing
   if (intent === 'stop_speaking') {

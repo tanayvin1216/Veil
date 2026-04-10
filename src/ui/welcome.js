@@ -4,14 +4,14 @@ const speakingIndicator = document.getElementById('speaking-indicator');
 let tutorialStarted = false;
 
 const tutorialSteps = [
-  'Welcome to AccessAgent. Your personal accessibility agent is now installed and running.',
+  'Welcome to Veil. Your personal accessibility agent is now installed and running.',
 
-  'AccessAgent automatically repairs every website you visit. ' +
+  'Veil automatically repairs every website you visit. ' +
   'It fixes missing image descriptions, labels unlabeled buttons, ' +
   'repairs heading structure, dismisses cookie popups, and detects CAPTCHAs. ' +
   'You do not need to do anything. It works automatically.',
 
-  'To activate the voice agent, just click the AccessAgent icon in your browser toolbar. ' +
+  'To activate the voice agent, just click the Veil icon in your browser toolbar. ' +
   'Your screen reader will announce it. Click it once to start listening, click again to stop. ' +
   'That is the only thing you need to remember.',
 
@@ -20,15 +20,15 @@ const tutorialSteps = [
   'Take me to the section about financial aid. Click sign in. Scroll down. ' +
   'Next heading. Go back. Or say help to hear all commands.',
 
-  'You can also right-click the AccessAgent icon for more options: ' +
+  'You can also right-click the Veil icon for more options: ' +
   'Read page summary, What am I missing report, and Settings.',
 
-  'About privacy. AccessAgent collects zero data. No analytics. No tracking. ' +
+  'About privacy. Veil collects zero data. No analytics. No tracking. ' +
   'If you add an API key in settings, it makes the voice agent smarter, ' +
   'but everything works without one too.',
 
   'That is everything. Close this tab and go to any website. ' +
-  'Click the AccessAgent icon in your toolbar to start talking. ' +
+  'Click the Veil icon in your toolbar to start talking. ' +
   'Say help at any time to hear all available voice commands.',
 ];
 

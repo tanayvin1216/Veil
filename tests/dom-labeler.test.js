@@ -105,11 +105,11 @@ describe('DOM Labeler', () => {
       expect(registry.length).toBe(1);
     });
 
-    test('adds data-accessagent-id to elements', () => {
+    test('adds data-veil-id to elements', () => {
       document.body.innerHTML = '<button>Click me</button>';
       buildElementRegistry(document);
       const btn = document.querySelector('button');
-      expect(btn.getAttribute('data-accessagent-id')).toMatch(/^el-\d+$/);
+      expect(btn.getAttribute('data-veil-id')).toMatch(/^el-\d+$/);
     });
 
     test('captures nearby text for context', () => {

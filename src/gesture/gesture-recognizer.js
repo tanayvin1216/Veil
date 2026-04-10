@@ -19,7 +19,7 @@ const GESTURE_HOLD_FRAMES = 2;
 /** Cooldown after a gesture is acted on (ms) */
 const GESTURE_COOLDOWN = 800;
 
-/** Map MediaPipe gesture names to AccessAgent commands */
+/** Map MediaPipe gesture names to Veil commands */
 const GESTURE_COMMANDS = {
   'Open_Palm':     { intent: 'stop_speaking', label: 'Stop' },
   'Victory':       { intent: 'describe_screen', label: 'What is on screen' },
@@ -47,12 +47,12 @@ let lastActionTime = 0;
 async function initRecognizer() {
   if (recognizer) return; // Already initialized
 
-  console.info('[AccessAgent] Loading MediaPipe model...');
+  console.info('[Veil] Loading MediaPipe model...');
   const vision = await FilesetResolver.forVisionTasks(
     chrome.runtime.getURL('wasm')
   );
 
-  console.info('[AccessAgent] MediaPipe WASM loaded, creating recognizer...');
+  console.info('[Veil] MediaPipe WASM loaded, creating recognizer...');
   recognizer = await GestureRecognizer.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task',
@@ -62,7 +62,7 @@ async function initRecognizer() {
     numHands: 1,
   });
 
-  console.info('[AccessAgent] Gesture recognizer ready');
+  console.info('[Veil] Gesture recognizer ready');
 }
 
 /**
@@ -82,17 +82,17 @@ async function startCamera() {
   }
 
   try {
-    console.info('[AccessAgent] Requesting camera access...');
+    console.info('[Veil] Requesting camera access...');
     stream = await navigator.mediaDevices.getUserMedia({
       video: { width: 320, height: 240, facingMode: 'user' },
     });
-    console.info('[AccessAgent] Camera access granted');
+    console.info('[Veil] Camera access granted');
     videoElement.srcObject = stream;
     await videoElement.play();
     isRunning = true;
-    console.info('[AccessAgent] Gesture camera started');
+    console.info('[Veil] Gesture camera started');
   } catch (err) {
-    console.error('[AccessAgent] Camera access failed:', err.name, err.message);
+    console.error('[Veil] Camera access failed:', err.name, err.message);
     chrome.runtime.sendMessage({
       type: 'GESTURE_ERROR',
       payload: { error: `Camera failed: ${err.name}. Go to chrome://settings/content/camera and allow this extension.` },
@@ -119,7 +119,7 @@ function stopCamera() {
   if (videoElement) {
     videoElement.srcObject = null;
   }
-  console.info('[AccessAgent] Gesture camera stopped');
+  console.info('[Veil] Gesture camera stopped');
 }
 
 /**
@@ -160,7 +160,7 @@ function detectLoop() {
     processFrame(performance.now());
   }, FRAME_INTERVAL);
 
-  console.info('[AccessAgent] Gesture detection loop started');
+  console.info('[Veil] Gesture detection loop started');
 }
 
 /**
@@ -221,7 +221,7 @@ function processFrame(timestamp) {
 
     const command = GESTURE_COMMANDS[gestureName];
     if (command) {
-      console.info(`[AccessAgent] Gesture detected: ${gestureName} → ${command.label}`);
+      console.info(`[Veil] Gesture detected: ${gestureName} → ${command.label}`);
       chrome.runtime.sendMessage({
         type: 'GESTURE_COMMAND',
         payload: {
@@ -249,7 +249,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ success: true });
         })
         .catch(err => {
-          console.error('[AccessAgent] Gesture start failed:', err);
+          console.error('[Veil] Gesture start failed:', err);
           sendResponse({ success: false, error: err.message });
         });
       return true;
@@ -309,7 +309,7 @@ async function playTTSAudio(audioData) {
   const notifyEnd = (reason) => {
     if (notified) return;
     notified = true;
-    console.info(`[AccessAgent] TTS audio ended (${reason}) — unmuting mic`);
+    console.info(`[Veil] TTS audio ended (${reason}) — unmuting mic`);
     chrome.runtime.sendMessage({ type: 'TTS_AUDIO_ENDED' }, () => {
       if (chrome.runtime.lastError) { /* ignore */ }
     });

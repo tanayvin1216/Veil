@@ -4,16 +4,16 @@
  */
 
 const STORAGE_KEYS = {
-  API_KEY: 'accessagent_api_key',
-  API_PROVIDER: 'accessagent_api_provider',
-  TIER1_ENABLED: 'accessagent_tier1_enabled',
-  TIER2_ENABLED: 'accessagent_tier2_enabled',
-  TIER3_ENABLED: 'accessagent_tier3_enabled',
-  VOICE_AUTO: 'accessagent_voice_auto',
-  VOICE_RATE: 'accessagent_voice_rate',
-  VOICE_PITCH: 'accessagent_voice_pitch',
-  VOICE_NAME: 'accessagent_voice_name',
-  SPEECH_ENGINE: 'accessagent_speech_engine',
+  API_KEY: 'veil_api_key',
+  API_PROVIDER: 'veil_api_provider',
+  TIER1_ENABLED: 'veil_tier1_enabled',
+  TIER2_ENABLED: 'veil_tier2_enabled',
+  TIER3_ENABLED: 'veil_tier3_enabled',
+  VOICE_AUTO: 'veil_voice_auto',
+  VOICE_RATE: 'veil_voice_rate',
+  VOICE_PITCH: 'veil_voice_pitch',
+  VOICE_NAME: 'veil_voice_name',
+  SPEECH_ENGINE: 'veil_speech_engine',
 };
 
 const elements = {};
@@ -96,13 +96,13 @@ async function loadSettings() {
 
   elements.apiProvider.value = result[STORAGE_KEYS.API_PROVIDER] || 'openai';
   elements.apiKey.value = result[STORAGE_KEYS.API_KEY] || '';
-  elements.elevenlabsKey.value = result['accessagent_elevenlabs_key'] || '';
+  elements.elevenlabsKey.value = result['veil_elevenlabs_key'] || '';
 
   elements.tier1.checked = result[STORAGE_KEYS.TIER1_ENABLED] !== false;
   elements.tier2.checked = result[STORAGE_KEYS.TIER2_ENABLED] !== false;
   elements.tier3.checked = result[STORAGE_KEYS.TIER3_ENABLED] !== false;
   elements.voiceAuto.checked = result[STORAGE_KEYS.VOICE_AUTO] !== false;
-  elements.gesturesEnabled.checked = result['accessagent_gestures_enabled'] === true;
+  elements.gesturesEnabled.checked = result['veil_gestures_enabled'] === true;
 
   elements.speechEngine.value = result[STORAGE_KEYS.SPEECH_ENGINE] || 'web-speech-api';
 
@@ -151,12 +151,12 @@ async function handleSave(event) {
   const settings = {
     [STORAGE_KEYS.API_PROVIDER]: elements.apiProvider.value,
     [STORAGE_KEYS.API_KEY]: elements.apiKey.value,
-    'accessagent_elevenlabs_key': elements.elevenlabsKey.value,
+    'veil_elevenlabs_key': elements.elevenlabsKey.value,
     [STORAGE_KEYS.TIER1_ENABLED]: elements.tier1.checked,
     [STORAGE_KEYS.TIER2_ENABLED]: elements.tier2.checked,
     [STORAGE_KEYS.TIER3_ENABLED]: elements.tier3.checked,
     [STORAGE_KEYS.VOICE_AUTO]: elements.voiceAuto.checked,
-    'accessagent_gestures_enabled': elements.gesturesEnabled.checked,
+    'veil_gestures_enabled': elements.gesturesEnabled.checked,
     [STORAGE_KEYS.SPEECH_ENGINE]: elements.speechEngine.value,
     [STORAGE_KEYS.VOICE_NAME]: elements.voiceName.value,
     [STORAGE_KEYS.VOICE_RATE]: parseFloat(elements.voiceRate.value),
@@ -177,7 +177,7 @@ function testVoiceOutput() {
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(
-    'AccessAgent is ready. This is how I will sound when describing pages to you.'
+    'Veil is ready. This is how I will sound when describing pages to you.'
   );
   utterance.rate = parseFloat(elements.voiceRate.value);
   utterance.pitch = parseFloat(elements.voicePitch.value);

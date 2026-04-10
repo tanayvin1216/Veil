@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AccessAgent",
+  "name": "Veil",
   "version": "1.0.0",
   "description": "Personal Accessibility Agent — automatically repairs web accessibility and provides voice-controlled navigation for blind and low-vision users.",
   "permissions": [
@@ -34,7 +34,7 @@
       "48": "assets/icons/icon-48.png",
       "128": "assets/icons/icon-128.png"
     },
-    "default_title": "Click to activate AccessAgent voice mode"
+    "default_title": "Click to activate Veil voice mode"
   },
   "options_page": "ui/settings.html",
   "icons": {

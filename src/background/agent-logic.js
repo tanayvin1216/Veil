@@ -16,7 +16,7 @@ let conversationHistory = [];
  * @param {string} url
  */
 async function navigateAndAnnounce(tabId, url) {
-  await chrome.storage.local.set({ 'accessagent_pending_announce': true });
+  await chrome.storage.local.set({ 'veil_pending_announce': true });
   await chrome.tabs.update(tabId, { url });
 }
 
@@ -52,7 +52,7 @@ export async function processVoiceCommand(transcript, tabId) {
     addToHistory(transcript, response.confirmation);
     return response;
   } catch (err) {
-    console.error('[AccessAgent] LLM fallback failed:', err.message);
+    console.error('[Veil] LLM fallback failed:', err.message);
     // Last resort — try rule-based even with low confidence
     const response = await executeIntent(ruleBasedResult, tabId);
     addToHistory(transcript, response.confirmation);
@@ -196,7 +196,7 @@ export function classifyIntentRuleBased(text) {
  * @returns {Promise<AgentResponse>}
  */
 async function handleWithLLM(transcript, tabId) {
-  console.info('[AccessAgent] Handling with LLM/search:', transcript);
+  console.info('[Veil] Handling with LLM/search:', transcript);
 
   // Get the full page structure
   const pageStructure = await sendMessageToTab(tabId, { type: 'get_page_structure' });
@@ -373,7 +373,7 @@ async function simpleTextMatch(query, structure, tabId) {
   const keywords = query.toLowerCase().split(/\s+/)
     .filter(t => t.length > 2 && !STOP_WORDS.has(t));
 
-  console.info('[AccessAgent] Text match keywords:', keywords);
+  console.info('[Veil] Text match keywords:', keywords);
 
   if (keywords.length === 0) {
     return {
@@ -766,7 +766,7 @@ async function executeIntent(intent, tabId) {
       try {
         const res = await chrome.runtime.sendMessage({ type: 'GESTURE_START' });
         if (res?.success) {
-          await chrome.storage.local.set({ 'accessagent_gestures_enabled': true });
+          await chrome.storage.local.set({ 'veil_gestures_enabled': true });
           return { confirmation: 'Gesture control is on. Show your hand to the camera.', action: null };
         }
         return { confirmation: res?.error || 'Could not start gesture control.', action: null };
@@ -779,7 +779,7 @@ async function executeIntent(intent, tabId) {
       try {
         await chrome.runtime.sendMessage({ type: 'GESTURE_STOP' });
       } catch { /* offscreen might not exist */ }
-      await chrome.storage.local.set({ 'accessagent_gestures_enabled': false });
+      await chrome.storage.local.set({ 'veil_gestures_enabled': false });
       return { confirmation: 'Gesture control disabled.', action: null };
     }
 
@@ -833,7 +833,7 @@ async function executeIntent(intent, tabId) {
       };
   }
   } catch (err) {
-    console.error('[AccessAgent] Action failed:', err.message);
+    console.error('[Veil] Action failed:', err.message);
     return {
       confirmation: `Sorry, that didn't work. ${err.message || ''}`,
       action: null,

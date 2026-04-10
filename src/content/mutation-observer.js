@@ -9,7 +9,7 @@ import { debug, info } from '../utils/logger.js';
 import { announce } from './aria-injector.js';
 
 const CONTEXT = 'MutationObserver';
-const LIVE_REGION_ID = 'accessagent-announcements';
+const LIVE_REGION_ID = 'veil-announcements';
 
 /** @type {MutationObserver|null} */
 let observer = null;
@@ -88,7 +88,7 @@ function processMutations(doc, mutations) {
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
       if (node.nodeType !== Node.ELEMENT_NODE) continue;
-      if (isAccessAgentElement(node)) continue;
+      if (isVeilElement(node)) continue;
 
       addedNodes++;
       const description = describeAddedNode(node);
@@ -199,14 +199,14 @@ function describeAddedNode(node) {
 }
 
 /**
- * Check if a node was created by AccessAgent (to avoid announcing our own changes).
+ * Check if a node was created by Veil (to avoid announcing our own changes).
  * @param {Node} node
  * @returns {boolean}
  */
-function isAccessAgentElement(node) {
+function isVeilElement(node) {
   if (node.nodeType !== Node.ELEMENT_NODE) return false;
-  return node.hasAttribute?.('data-accessagent') ||
-    node.id?.startsWith('accessagent-');
+  return node.hasAttribute?.('data-veil') ||
+    node.id?.startsWith('veil-');
 }
 
 /**

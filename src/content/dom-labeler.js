@@ -100,7 +100,7 @@ export function getElementById(id) {
 export function getDOMElement(id) {
   const entry = elementRegistry.get(id);
   if (!entry) return null;
-  return document.querySelector(`[data-accessagent-id="${id}"]`);
+  return document.querySelector(`[data-veil-id="${id}"]`);
 }
 
 /**
@@ -190,7 +190,7 @@ function calculateMatchScore(queryTokens, normalizedQuery, entry) {
 function createElementEntry(el) {
   const id = `el-${++elementCounter}`;
 
-  el.setAttribute('data-accessagent-id', id);
+  el.setAttribute('data-veil-id', id);
 
   const rect = el.getBoundingClientRect();
 

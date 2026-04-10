@@ -16,7 +16,7 @@ import { info, debug, warn } from '../utils/logger.js';
 import { announce } from './aria-injector.js';
 
 const CONTEXT = 'Tier2';
-const LIVE_REGION_ID = 'accessagent-announcements';
+const LIVE_REGION_ID = 'veil-announcements';
 
 /**
  * Run all Tier 2 repairs.
