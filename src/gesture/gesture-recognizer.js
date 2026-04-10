@@ -302,12 +302,36 @@ async function playTTSAudio(audioData) {
   const blob = new Blob([new Uint8Array(audioData)], { type: 'audio/mp3' });
   audio.src = URL.createObjectURL(blob);
 
-  // Notify service worker when playback ends so mic can unmute
-  audio.onended = () => {
+  // Bridge: mic MUST unmute no matter how playback ends — natural end, error,
+  // abort, or forced pause via STOP_TTS_AUDIO. Without this, voice input stays
+  // blocked after a gesture because isSpeaking never clears.
+  let notified = false;
+  const notifyEnd = (reason) => {
+    if (notified) return;
+    notified = true;
+    console.info(`[AccessAgent] TTS audio ended (${reason}) — unmuting mic`);
     chrome.runtime.sendMessage({ type: 'TTS_AUDIO_ENDED' }, () => {
       if (chrome.runtime.lastError) { /* ignore */ }
     });
   };
 
-  await audio.play();
+  audio.onended = () => notifyEnd('ended');
+  audio.onerror = () => notifyEnd('error');
+  audio.onabort = () => notifyEnd('abort');
+  audio.onpause = () => {
+    // Pause fires on explicit stop AND natural end — only treat as terminal
+    // when playback hasn't completed on its own (ended already handled above).
+    if (audio.currentTime === 0 || audio.ended) notifyEnd('pause');
+  };
+
+  try {
+    await audio.play();
+  } catch (err) {
+    notifyEnd('play-rejected');
+    throw err;
+  }
+
+  // Backstop: if no event fires within duration+1s, unmute anyway.
+  const safetyMs = Math.max(((audio.duration || 0) * 1000) + 1000, 4000);
+  setTimeout(() => notifyEnd('backstop'), safetyMs);
 }

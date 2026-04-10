@@ -178,13 +178,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'TTS_AUDIO_ENDED':
       // Unmute mic after ElevenLabs audio finishes
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs?.[0]?.id) {
-          chrome.tabs.sendMessage(tabs[0].id, { type: 'mute_mic', payload: { muted: false } }, () => {
-            if (chrome.runtime.lastError) { /* ignore */ }
-          });
-        }
-      });
+      clearTimeout(speakBackstopTimer);
+      speakBackstopTimer = null;
+      muteMic(false);
       sendResponse({ success: true });
       return false;
 
@@ -356,6 +352,18 @@ async function handleToggle(payload) {
   return { success: true, enabled };
 }
 
+/** Independent backstop unmute timer — guarantees mic never stays muted
+ *  even if TTS_AUDIO_ENDED is dropped (offscreen doc killed, msg race, etc.) */
+let speakBackstopTimer = null;
+
+/** Rough estimate of TTS duration from text length so the backstop is
+ *  long enough to not cut speech, short enough to keep voice responsive. */
+function estimateSpeechDurationMs(text) {
+  const wordCount = text.trim().split(/\s+/).length;
+  const wordsPerSecond = 2.6;
+  return Math.ceil((wordCount / wordsPerSecond) * 1000) + 1500;
+}
+
 /**
  * Speak text. ElevenLabs → chrome.tts fallback. Mutes mic during speech.
  */
@@ -370,6 +378,14 @@ function handleSpeak(payload) {
   // Mute mic
   muteMic(true);
 
+  // Start backstop timer — unmute no matter what if nothing else does.
+  clearTimeout(speakBackstopTimer);
+  speakBackstopTimer = setTimeout(() => {
+    console.warn('[AccessAgent] Speak backstop fired — force-unmuting mic');
+    muteMic(false);
+    speakBackstopTimer = null;
+  }, estimateSpeechDurationMs(text));
+
   // Try ElevenLabs, fall back to chrome.tts
   speakWithElevenLabs(text).catch((err) => {
     console.warn('[AccessAgent] ElevenLabs failed, using chrome.tts:', err.message);
@@ -378,6 +394,8 @@ function handleSpeak(payload) {
       pitch: 0.95,
       onEvent: (event) => {
         if (event.type === 'end' || event.type === 'error' || event.type === 'cancelled') {
+          clearTimeout(speakBackstopTimer);
+          speakBackstopTimer = null;
           muteMic(false);
         }
       },

@@ -199,10 +199,13 @@ function setupMessageListener() {
 
       case 'mute_mic':
         isSpeaking = !!message.payload?.muted;
-        // Safety: auto-unmute after 15s max to prevent stuck state
+        // Safety: auto-unmute after 4s max to prevent stuck state. Gesture
+        // confirmations are short (~1–3s); a longer window traps the user
+        // between "gesture fired TTS" and "I can speak again", which is
+        // exactly the bridge bug blind users hit when switching input modes.
+        clearTimeout(muteTimeout);
         if (isSpeaking) {
-          clearTimeout(muteTimeout);
-          muteTimeout = setTimeout(() => { isSpeaking = false; }, 15000);
+          muteTimeout = setTimeout(() => { isSpeaking = false; }, 4000);
         }
         sendResponse({ success: true });
         return false;
