@@ -24,56 +24,72 @@ A multimodal accessibility agent for the web.
 
 ## The Story
 
-The web wasn't built for everyone. Screen readers assume you can follow linear speech. Keyboard navigation assumes fine motor control. Voice assistants assume you can speak clearly. Veil is a Chrome extension that combines voice commands, hand gestures, and high-quality text-to-speech so navigating the web doesn't depend on any single ability.
+The web wasn't built for everyone. Screen readers assume you can follow linear speech. Keyboard navigation assumes fine motor control. Voice assistants assume you can speak clearly.
+
+Veil is a Chrome extension that combines voice commands, hand gestures, and high-quality text-to-speech so navigating the web doesn't depend on any single ability.
 
 ---
 
-## What It Does
+## Features
 
-- **Voice control** — speak to navigate, click, scroll, read, and search
-- **Hand gesture control** — MediaPipe-powered gesture recognition through your webcam for hands-free navigation
-- **Natural TTS** — human-quality text-to-speech via OpenAI, not the robotic default browser voice
-- **ARIA injection** — automatically patches accessibility attributes on poorly-built sites
-- **Mutation observer** — keeps up as pages change, so dynamic content stays reachable
-- **Multimodal bridge** — voice and gestures work simultaneously without stepping on each other
+| Feature | Description |
+| --- | --- |
+| **Voice Control** | Speak to navigate, click, scroll, read, and search across any page. |
+| **Hand Gestures** | MediaPipe-powered gesture recognition through your webcam for fully hands-free navigation. |
+| **Natural TTS** | Human-quality text-to-speech via OpenAI, not the robotic default browser voice. |
+| **ARIA Injection** | Automatically patches accessibility attributes on poorly-built sites. |
+| **Mutation Observer** | Tracks DOM changes so dynamic content stays reachable. |
+| **Multimodal Bridge** | Voice and gestures operate simultaneously without stepping on each other. |
 
 ---
 
 ## Tech Stack
 
-- Chrome Extension (Manifest V3) — service worker, content scripts, offscreen document
-- MediaPipe Hands for real-time gesture recognition in the browser
-- Web Speech API for low-latency voice recognition
-- OpenAI TTS for natural speech synthesis
-- Webpack + Babel build pipeline
+| Layer | Technology |
+| --- | --- |
+| Extension Platform | Chrome Manifest V3 — service worker, content scripts, offscreen document |
+| Gesture Recognition | MediaPipe Hands |
+| Voice Recognition | Web Speech API |
+| Speech Synthesis | OpenAI TTS |
+| Build Pipeline | Webpack + Babel |
 
 ---
 
 ## Roadmap
 
-- Publishing to the Chrome Web Store so anyone can install it in one click
-- Going fully open source. The goal is for Veil to become a community-maintained accessibility tool — if you've ever watched someone struggle to use the web, you know how much room there is to improve
-- Expanded language support
-- Local on-device TTS option for privacy-first users
-- Per-site gesture profiles
+- [ ] Publish to the Chrome Web Store for one-click installation
+- [ ] Fully open source the project so the community can maintain it
+- [ ] Expanded language support
+- [ ] Local on-device TTS option for privacy-first users
+- [ ] Per-site gesture profiles
+- [ ] Accessibility telemetry (opt-in) to find the sites that break most often
 
 ---
 
-## Contributing
-
-Accessibility tools should belong to the community that depends on them. PRs, issues, translations, and gesture suggestions are all welcome. If you have a disability and something doesn't work for you, please open an issue — that feedback is the most valuable kind.
+## Getting Started
 
 ```bash
 git clone https://github.com/tanayvin1216/Veil.git
 cd Veil
 npm install
 npm run build
-# Load the `dist/` folder as an unpacked extension in chrome://extensions
 ```
+
+Then load the `dist/` folder as an unpacked extension at `chrome://extensions`.
+
+---
+
+## Contributing
+
+Accessibility tools should belong to the community that depends on them. PRs, issues, translations, and gesture suggestions are all welcome.
+
+If you have a disability and something doesn't work for you, please open an issue — that feedback is the most valuable kind.
 
 ---
 
 ## Contact
 
-- GitHub: [@tanayvin1216](https://github.com/tanayvin1216)
-- Issues: [Report a bug or request a feature](https://github.com/tanayvin1216/Veil/issues)
+| | |
+| --- | --- |
+| GitHub | [@tanayvin1216](https://github.com/tanayvin1216) |
+| Issues | [Report a bug or request a feature](https://github.com/tanayvin1216/Veil/issues) |
