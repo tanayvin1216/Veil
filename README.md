@@ -43,6 +43,29 @@ Veil is a Chrome extension that combines voice commands, hand gestures, and high
 
 ---
 
+## How Veil Is Different
+
+Plenty of accessibility tools exist. None combine what Veil does in a single extension.
+
+| Tool | Voice | Hand Gestures | High-Quality TTS | Runtime ARIA Repair |
+| --- | :---: | :---: | :---: | :---: |
+| **Veil** | ✓ | ✓ | ✓ | ✓ |
+| LipSurf | ✓ | — | — | — |
+| Talon + Rango | ✓ | face only | — | — |
+| Handsfree for Web | ✓ | — | — | — |
+| CommandPlus | — | ✓ | — | — |
+| Helperbird | — | — | partial | reading aids only |
+| macOS Voice Control / Dragon | ✓ | — | — | — |
+
+The space is **underserved, not uncontested**. Voice-only tools are moderately crowded. Webcam gesture tools exist mostly as prototypes. The intersection — simultaneous voice + webcam gestures + natural TTS + runtime ARIA patching, built for people who can't rely on any single input — has no shipped product.
+
+Two things set Veil apart:
+
+- **Simultaneous multimodal bridge.** Voice and gestures run at the same time without interrupting each other. Most tools force you to pick one input modality.
+- **Runtime ARIA injection.** Existing ARIA tools are developer audit tools (WAVE, ARIA DevTools) or overlay vendors. Veil patches accessibility attributes live, for end users, on broken sites.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
